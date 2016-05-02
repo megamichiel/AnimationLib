@@ -8,6 +8,10 @@ import me.clip.placeholderapi.PlaceholderHook;
 import me.megamichiel.animationlib.Nagger;
 import org.bukkit.entity.Player;
 
+/**
+ * An IPlaceholder&lt;String&gt; which utilises the plugin PlaceholderAPI
+ *
+ */
 public class Placeholder implements IPlaceholder<String> {
 	
 	private static final boolean placeHolder;

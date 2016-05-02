@@ -21,6 +21,7 @@ import java.util.logging.Level;
  *     <li>Replaces Maps in Lists with ConfigurationSections.</li>
  *     <li>Puts all keys to lower case when loading, to allow for case-insensitive keys</li>
  * </ul>
+ * <i>Since: 1.0.0</i>
  *
  * @see YamlConfig#loadConfig(File)
  * @see YamlConfig#loadConfig(Reader)

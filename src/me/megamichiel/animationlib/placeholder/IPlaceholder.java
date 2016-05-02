@@ -9,7 +9,14 @@ import org.bukkit.entity.Player;
  * @param <T> the type of the placeholder
  */
 public interface IPlaceholder<T> {
-    
+
+    /**
+     * Returns a value using a Player
+     *
+     * @param nagger the nagger to report errors to
+     * @param who the Player to do stuff with
+     * @return a value
+     */
     T invoke(Nagger nagger, Player who);
 
     /**

@@ -1,12 +1,13 @@
 package me.megamichiel.animationlib.placeholder;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.regex.Pattern;
-
 import me.megamichiel.animationlib.Nagger;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 
 public class StringBundle extends ArrayList<Object> implements IPlaceholder<String> {
 
@@ -25,6 +26,12 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
         this.nagger = nagger;
     }
 
+    /**
+     * Returns whether this StringBundle contains anything other than Strings<br/>
+     * <i>Since: 1.0.0</i>
+     *
+     * @return
+     */
     public boolean containsPlaceholders() {
         for (Object o : this)
             if (!(o instanceof String))
@@ -32,16 +39,65 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
         return false;
     }
 
+    /**
+     * Replaces <i>query</i> with a placeholder. (case-insensitive)<br/>
+     * <i>Since: 1.1.0</i>
+     *
+     * @param query the text to find
+     * @param placeholder the placeholder to replace the text with
+     */
+    public void replace(String query, IPlaceholder<?> placeholder) {
+        query = query.toLowerCase(Locale.US);
+        for (int i = 0; i < size(); i++) {
+            if (get(i) instanceof String) {
+                String val = (String) get(i);
+                List<Object> result = new ArrayList<>();
+                for (int index; (index = val.toLowerCase(Locale.US).indexOf(query)) > -1;) {
+                    String prefix = val.substring(0, index);
+                    if (!prefix.isEmpty())
+                        result.add(prefix);
+                    result.add(placeholder);
+                    val = val.substring(index + query.length());
+                }
+                if (!result.isEmpty()) {
+                    remove(i);
+                    if (!val.isEmpty())
+                        result.add(val);
+                    addAll(i, result);
+                }
+            }
+        }
+    }
+
+    /**
+     * This invokes {@link #toString(Player)}<br/>
+     * <i>Since: 1.0.0</i>
+     *
+     * @see #toString(Player)
+     */
     @Override
     public String invoke(Nagger nagger, Player player) {
         return toString(player);
     }
 
+    /**
+     * Attemps to return this value as a constant String IPlaceholder.<br/>
+     * <i>Since: 1.0.0</i>
+     *
+     * @return a constant String placeholder if {@link #containsPlaceholders()} returns false.
+     * Returns this StringBundle instance otherwise
+     */
     public IPlaceholder<String> tryCache() {
         if (!containsPlaceholders()) return ConstantPlaceholder.of(toString(null));
         return this;
     }
-    
+
+    /**
+     * Colors all ampersands (&) in each String of this StringBundle<br/>
+     * <i>Since: 1.0.0</i>
+     *
+     * @return this StringBundle instance
+     */
     public StringBundle colorAmpersands() {
         for (int i = 0, size = size(); i < size; i++) {
             if (get(i) instanceof String) {
@@ -70,7 +126,15 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
         }
         return this;
     }
-    
+
+    /**
+     * Returns a String representation of this StringBundle,
+     * by invoking all placeholders in this StringBundle with the player<br/>
+     * <i>Since: 1.0.0</i>
+     *
+     * @param player the player to invoke the placeholders with
+     * @return a String, containing the result of the placeholders
+     */
     public String toString(Player player)
     {
         StringBuilder sb = new StringBuilder();
@@ -82,14 +146,31 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
         }
         return sb.toString();
     }
-    
+
+    /**
+     * Creates an array of StringBundles from an array of Strings<br/>
+     * This method does not parse the strings, for that see {@link #parse(Nagger, String...)}<br/>
+     * <i>Since: 1.0.0</i>
+     *
+     * @param nagger the Nagger to report errors to
+     * @param array the array of strings to transform
+     * @return
+     */
     public static StringBundle[] fromArray(Nagger nagger, String... array) {
         StringBundle[] bundles = new StringBundle[array.length];
         for(int i = 0; i < array.length; i++)
             bundles[i] = new StringBundle(nagger, array[i]);
         return bundles;
     }
-    
+
+    /**
+     * Parses an array of Strings into an array of StringBundles<br/>
+     * <i>Since: 1.0.0</i>
+     *
+     * @param nagger the Nagger to report errors to
+     * @param array the array of Strings to parse
+     * @return the newly created array, containing parsed Strings
+     */
     public static StringBundle[] parse(Nagger nagger, String... array) {
         StringBundle[] result = new StringBundle[array.length];
         for (int i = 0; i < array.length; i++)
@@ -97,6 +178,15 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
         return result;
     }
 
+    /**
+     * Parses a String into a StringBundle, this means:<br/>
+     * Placeholders, unicode escapes and boxes (\x)<br/>
+     * <i>Since: 1.0.0</i>
+     *
+     * @param nagger the nagger to report errors to
+     * @param str the String to parse
+     * @return a parsed String, as StringBundle
+     */
     public static StringBundle parse(Nagger nagger, String str) {
         if (str == null) return null;
 
