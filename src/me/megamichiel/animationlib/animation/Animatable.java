@@ -73,8 +73,6 @@ public abstract class Animatable<E> extends ArrayList<E> {
 
     /**
      * Returns the default value, which is retrieved by {@link #get(int)} if this Animatable is empty
-     *
-     * @return
      */
     protected E defaultValue() {
         return defaultValue;
@@ -94,8 +92,6 @@ public abstract class Animatable<E> extends ArrayList<E> {
 
     /**
      * Returns whether this Animatable iterates over the values randomly
-     *
-     * @return
      */
     public boolean isRandom() {
         return isRandom;
@@ -103,8 +99,6 @@ public abstract class Animatable<E> extends ArrayList<E> {
 
     /**
      * Sets whether this Animatable should iterate over the values randomly
-     *
-     * @param random
      */
     public void setRandom(boolean random) {
         isRandom = random;
@@ -136,5 +130,11 @@ public abstract class Animatable<E> extends ArrayList<E> {
             return true;
         }
         return false;
+    }
+
+    public static <E, A extends Animatable<E>> A load(A animatable, Nagger nagger,
+                                                      ConfigurationSection section, String key, E def) {
+        animatable.load(nagger, section, key, def);
+        return animatable;
     }
 }

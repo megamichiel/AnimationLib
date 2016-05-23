@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 
@@ -37,7 +38,7 @@ public class YamlConfig extends YamlConfiguration {
     @Override
     protected void convertMapsToSections(Map<?, ?> input, ConfigurationSection section) {
         for (Map.Entry<?, ?> entry : input.entrySet()) {
-            String key = entry.getKey().toString().toLowerCase();
+            String key = entry.getKey().toString().toLowerCase(Locale.US);
             Object value = entry.getValue();
 
             if (value instanceof Map) {
@@ -64,7 +65,11 @@ public class YamlConfig extends YamlConfiguration {
     }
 
     public List<ConfigurationSection> getConfigurationList(String path) {
-        List<?> list = getList(path);
+        return getConfigurationList(this, path);
+    }
+
+    public static List<ConfigurationSection> getConfigurationList(ConfigurationSection section, String path) {
+        List<?> list = section.getList(path);
         if (list == null) return new ArrayList<>();
         List<ConfigurationSection> out = new ArrayList<>();
         for (Object o : list)

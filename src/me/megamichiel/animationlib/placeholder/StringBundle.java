@@ -1,15 +1,18 @@
 package me.megamichiel.animationlib.placeholder;
 
+import com.google.common.base.Function;
 import me.megamichiel.animationlib.Nagger;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-public class StringBundle extends ArrayList<Object> implements IPlaceholder<String> {
+public class StringBundle extends ArrayList<Object> implements IPlaceholder<String>, Cloneable {
 
     public static final char BOX = '\u2588';
 
@@ -26,11 +29,19 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
         this.nagger = nagger;
     }
 
+    public StringBundle(Nagger nagger, int capacity) {
+        super(capacity);
+        this.nagger = nagger;
+        ensureCapacity(capacity);
+    }
+
+    public StringBundle(Nagger nagger, Collection<?> c) {
+        super(c);
+        this.nagger = nagger;
+    }
+
     /**
-     * Returns whether this StringBundle contains anything other than Strings<br/>
-     * <i>Since: 1.0.0</i>
-     *
-     * @return
+     * Returns whether this StringBundle contains anything other than Strings
      */
     public boolean containsPlaceholders() {
         for (Object o : this)
@@ -52,17 +63,14 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
             if (get(i) instanceof String) {
                 String val = (String) get(i);
                 List<Object> result = new ArrayList<>();
-                for (int index; (index = val.toLowerCase(Locale.US).indexOf(query)) > -1;) {
-                    String prefix = val.substring(0, index);
-                    if (!prefix.isEmpty())
-                        result.add(prefix);
+                for (int index; (index = val.toLowerCase(Locale.US).indexOf(query)) > -1;
+                     val = val.substring(index + query.length())) {
+                    if (index > 0) result.add(val.substring(0, index));
                     result.add(placeholder);
-                    val = val.substring(index + query.length());
                 }
                 if (!result.isEmpty()) {
                     remove(i);
-                    if (!val.isEmpty())
-                        result.add(val);
+                    if (!val.isEmpty()) result.add(val);
                     addAll(i, result);
                 }
             }
@@ -70,19 +78,57 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
     }
 
     /**
-     * This invokes {@link #toString(Player)}<br/>
-     * <i>Since: 1.0.0</i>
+     * Replaces all matches for <i>pattern</i> with an IPlaceholder retrieved by <i>function</i><br/>
+     * <i>Since: 1.1.1</i>
      *
-     * @see #toString(Player)
+     * @param pattern the pattern to find text with
+     * @param function the Function that creates an IPlaceholder from a Matcher
+     */
+    public void replace(Pattern pattern, Function<? super Matcher, ? extends IPlaceholder<?>> function) {
+        for (int i = 0; i < size(); i++) {
+            if (get(i) instanceof String) {
+                String val = (String) get(i);
+                Matcher matcher = pattern.matcher(val);
+                if (matcher.find()) {
+                    List<Object> result = new ArrayList<>();
+                    int lastEnd = 0;
+                    for (boolean found = true; found; lastEnd = matcher.end(), found = matcher.find()) {
+                        if (matcher.start() > 0)
+                            result.add(val.substring(lastEnd, matcher.start()));
+                        result.add(function.apply(matcher));
+                    }
+                    if (lastEnd < val.length())
+                        result.add(val.substring(lastEnd));
+                    remove(i);
+                    addAll(i, result);
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns a String representation of this StringBundle,
+     * by invoking all placeholders in this StringBundle with the player,
+     * and reporting errors to <i>nagger</i><br/>
+     * 
+     *
+     * @param nagger The Nagger to report errors to
+     * @param player the Player to invoke the placeholders with
      */
     @Override
     public String invoke(Nagger nagger, Player player) {
-        return toString(player);
+        StringBuilder sb = new StringBuilder();
+        for (Object o : this) {
+            if (o instanceof IPlaceholder && player != null)
+                sb.append(((IPlaceholder) o).invoke(nagger, player));
+            else sb.append(String.valueOf(o));
+        }
+        return sb.toString();
     }
 
     /**
      * Attemps to return this value as a constant String IPlaceholder.<br/>
-     * <i>Since: 1.0.0</i>
+     * 
      *
      * @return a constant String placeholder if {@link #containsPlaceholders()} returns false.
      * Returns this StringBundle instance otherwise
@@ -94,67 +140,35 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
 
     /**
      * Colors all ampersands (&) in each String of this StringBundle<br/>
-     * <i>Since: 1.0.0</i>
+     * 
      *
      * @return this StringBundle instance
      */
     public StringBundle colorAmpersands() {
-        for (int i = 0, size = size(); i < size; i++) {
-            if (get(i) instanceof String) {
-                String val = (String) get(i);
-                int length = val.length();
-                StringBuilder sb = new StringBuilder(length);
-                for (int j = 0; j < length; j++) {
-                    char c = val.charAt(j);
-                    if (c == '&' && j + 1 < length) {
-                        char next = val.charAt(j + 1);
-                        if (next == '&') {
-                            sb.append('&');
-                            j++;
-                            continue;
-                        } else if ("0123456789ABCDEFabcdefKLMNORklmnor".indexOf(next) > -1) {
-                            sb.append(ChatColor.COLOR_CHAR);
-                            sb.append(next);
-                            j++;
-                            continue;
-                        }
-                    }
-                    sb.append(c);
-                }
-                set(i, sb.toString());
-            }
-        }
+        for (int i = 0, size = size(); i < size; i++)
+            if (get(i) instanceof String)
+                set(i, ChatColor.translateAlternateColorCodes('&', (String) get(i)));
         return this;
     }
 
     /**
-     * Returns a String representation of this StringBundle,
-     * by invoking all placeholders in this StringBundle with the player<br/>
-     * <i>Since: 1.0.0</i>
+     * Invokes {@link #invoke(Nagger, Player)} using the Nagger given in this class' constructor<br/>
+     * 
      *
      * @param player the player to invoke the placeholders with
      * @return a String, containing the result of the placeholders
      */
-    public String toString(Player player)
-    {
-        StringBuilder sb = new StringBuilder();
-        for (Object o : this)
-        {
-            if (o instanceof IPlaceholder && player != null)
-                sb.append(((IPlaceholder) o).invoke(nagger, player));
-            else sb.append(String.valueOf(o));
-        }
-        return sb.toString();
+    public String toString(Player player) {
+        return invoke(nagger, player);
     }
 
     /**
      * Creates an array of StringBundles from an array of Strings<br/>
      * This method does not parse the strings, for that see {@link #parse(Nagger, String...)}<br/>
-     * <i>Since: 1.0.0</i>
+     * 
      *
      * @param nagger the Nagger to report errors to
      * @param array the array of strings to transform
-     * @return
      */
     public static StringBundle[] fromArray(Nagger nagger, String... array) {
         StringBundle[] bundles = new StringBundle[array.length];
@@ -165,7 +179,7 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
 
     /**
      * Parses an array of Strings into an array of StringBundles<br/>
-     * <i>Since: 1.0.0</i>
+     * 
      *
      * @param nagger the Nagger to report errors to
      * @param array the array of Strings to parse
@@ -181,7 +195,7 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
     /**
      * Parses a String into a StringBundle, this means:<br/>
      * Placeholders, unicode escapes and boxes (\x)<br/>
-     * <i>Since: 1.0.0</i>
+     * 
      *
      * @param nagger the nagger to report errors to
      * @param str the String to parse
@@ -191,12 +205,10 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
         if (str == null) return null;
 
         StringBundle bundle = new StringBundle(nagger);
-        StringBuilder builder = new StringBuilder();
+        StringBuilder builder = new StringBuilder(str.length());
         char[] array = str.toCharArray();
-        int index = 0;
         boolean escape = false;
-        loop:
-        while (index < array.length) {
+        for (int index = 0; index < array.length; index++) {
             char c = array[index];
             if (c == '\\') {
                 if(!(escape = !escape)) //Escaped back-slash
@@ -206,17 +218,15 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
                 switch (c) {
                     case 'u': //Unicode character
                         try {
-                            char[] unicode = Arrays.copyOfRange(array, index + 1, index + 5);
                             index += 4;
-                            builder.append((char) Integer.parseInt(new String(unicode), 16));
-                        } catch (ArrayIndexOutOfBoundsException ex) {
+                            builder.append((char) Integer.parseInt(
+                                    new String(array, index + 1, 4), 16));
+                        } catch (StringIndexOutOfBoundsException ex) {
                             nagger.nag("Error on parsing unicode character in string " + str + ": "
                                     + "Expected number to have 4 digits!");
-                            break loop;
                         } catch (NumberFormatException ex) {
                             nagger.nag("Error on parsing unicode character in string " + str + ": "
                                     + "Invalid characters (Allowed: 0-9 and A-F)!");
-                            break loop;
                         }
                         break;
                     case '%': //Escaped placeholder character
@@ -229,7 +239,7 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
             } else {
                 switch(c) {
                     case '%': //Start of placeholder
-                        if (index + 1 < array.length && array[index + 1] == c) {
+                        if (index + 1 < array.length && array[index + 1] == c) { // Double-character escape
                             index++;
                             builder.append(c);
                             break;
@@ -246,8 +256,7 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
                                     + "did you forget to escape the '%' symbol?");
                             break;
                         }
-                        Placeholder placeholder = new Placeholder(builder.toString());
-                        bundle.add(placeholder);
+                        bundle.add(new Placeholder(builder.toString()));
                         builder = new StringBuilder();
                         break;
                     default:
@@ -255,10 +264,13 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
                         break;
                 }
             }
-            index++;
         }
-        if(builder.length() > 0)
-            bundle.add(builder.toString());
+        if(builder.length() > 0) bundle.add(builder.toString());
         return bundle;
+    }
+
+    @Override
+    public StringBundle clone() {
+        return new StringBundle(nagger, this);
     }
 }

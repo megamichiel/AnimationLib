@@ -19,17 +19,22 @@ public class AnimLib extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
-        try {
-            String update = getVersion(22295);
-            if (!update.equals(getDescription().getVersion())) {
-                getLogger().info("A new version is available: " + update);
-                this.update = DARK_GRAY.toString() + '[' + GOLD + "AnimationLib"
-                        + DARK_GRAY + ']' + GREEN
-                        + " A new version (" + update + ") is available";
+        getServer().getScheduler().runTaskAsynchronously(this, new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String update = getVersion(22295);
+                    if (!update.equals(getDescription().getVersion())) {
+                        getLogger().info("A new version is available: " + update);
+                        AnimLib.this.update = DARK_GRAY.toString() + '[' + GOLD + "AnimationLib"
+                                + DARK_GRAY + ']' + GREEN
+                                + " A new version (" + update + ") is available";
+                    }
+                } catch (IOException ex) {
+                    getLogger().warning("Failed to check for updates");
+                }
             }
-        } catch (IOException ex) {
-            getLogger().warning("Failed to check for updates");
-        }
+        });
         getServer().getPluginManager().registerEvents(this, this);
     }
 
