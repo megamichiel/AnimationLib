@@ -15,10 +15,14 @@ import java.util.logging.Level;
 
 public class AnimLib extends JavaPlugin implements Listener {
 
+    private static AnimLib instance;
+
+    private boolean autoDownloadPlaceholders;
     private String update;
 
     @Override
     public void onEnable() {
+        instance = this;
         getServer().getScheduler().runTaskAsynchronously(this, new Runnable() {
             @Override
             public void run() {
@@ -36,6 +40,8 @@ public class AnimLib extends JavaPlugin implements Listener {
             }
         });
         getServer().getPluginManager().registerEvents(this, this);
+        saveDefaultConfig();
+        autoDownloadPlaceholders = getConfig().getBoolean("auto-download-placeholders");
     }
 
     @EventHandler
@@ -43,6 +49,10 @@ public class AnimLib extends JavaPlugin implements Listener {
         if (update != null
                 && event.getPlayer().hasPermission("animlib.seeupdate"))
             event.getPlayer().sendMessage(update);
+    }
+
+    public boolean autoDownloadPlaceholders() {
+        return autoDownloadPlaceholders;
     }
 
     /**
@@ -67,5 +77,9 @@ public class AnimLib extends JavaPlugin implements Listener {
             return version;
         }
         throw new IOException("Unexpected response");
+    }
+
+    public static AnimLib getInstance() {
+        return instance;
     }
 }

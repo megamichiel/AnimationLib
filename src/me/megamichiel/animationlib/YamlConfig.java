@@ -6,10 +6,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.Reader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -41,13 +38,11 @@ public class YamlConfig extends YamlConfiguration {
             String key = entry.getKey().toString().toLowerCase(Locale.US);
             Object value = entry.getValue();
 
-            if (value instanceof Map) {
+            if (value instanceof Map)
                 convertMapsToSections((Map<?, ?>) value, section.createSection(key));
-            } else if (value instanceof List) {
+            else if (value instanceof List)
                 section.set(key, convertMapsToSections((List<?>) value));
-            } else {
-                section.set(key, value);
-            }
+            else section.set(key, value);
         }
     }
 
@@ -66,6 +61,23 @@ public class YamlConfig extends YamlConfiguration {
 
     public List<ConfigurationSection> getConfigurationList(String path) {
         return getConfigurationList(this, path);
+    }
+
+    public void load(Reader reader) throws IOException, InvalidConfigurationException {
+        BufferedReader input = reader instanceof BufferedReader?(BufferedReader)reader:new BufferedReader(reader);
+        StringBuilder builder = new StringBuilder();
+
+        String line;
+        try {
+            while((line = input.readLine()) != null) {
+                builder.append(line);
+                builder.append('\n');
+            }
+        } finally {
+            input.close();
+        }
+
+        this.loadFromString(builder.toString());
     }
 
     public static List<ConfigurationSection> getConfigurationList(ConfigurationSection section, String path) {

@@ -32,9 +32,9 @@ public class AnimatedEnum<E extends Enum<E>> extends Animatable<E> {
     }
     
     @Override
-    protected E convert(Nagger nagger, String str) {
+    protected E convert(Nagger nagger, Object str) {
         try {
-            return Enum.valueOf(clazz, str.toUpperCase().replace('-', '_'));
+            return Enum.valueOf(clazz, str.toString().toUpperCase().replace('-', '_'));
         } catch (IllegalArgumentException ex) {
             nagger.nag("Couldn't find " + clazz.getSimpleName() + " by id " + str + '!');
             nagger.nag("Possible values: " + Joiner.on(", ").join(clazz.getEnumConstants()).toLowerCase().replace('_', '-'));

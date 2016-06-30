@@ -24,7 +24,7 @@ public class AnimatedText extends Animatable<StringBundle> {
     }
     
     @Override
-    protected StringBundle convert(Nagger nagger, String str) {
-        return StringBundle.parse(nagger, str).colorAmpersands();
+    protected StringBundle convert(Nagger nagger, Object str) {
+        return StringBundle.parse(nagger, str.toString()).colorAmpersands();
     }
 }

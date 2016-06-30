@@ -7,10 +7,10 @@ public class AnimatedNumber extends Animatable<Integer> {
 	private static final long serialVersionUID = 9008416363369565560L;
 	
 	@Override
-	protected Integer convert(Nagger nagger, String str) {
+	protected Integer convert(Nagger nagger, Object str) {
 		try
 		{
-			return Integer.valueOf(str);
+			return Integer.valueOf(str.toString());
 		}
 		catch (NumberFormatException ex)
 		{

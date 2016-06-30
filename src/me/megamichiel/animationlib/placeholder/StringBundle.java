@@ -119,9 +119,15 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
     public String invoke(Nagger nagger, Player player) {
         StringBuilder sb = new StringBuilder();
         for (Object o : this) {
-            if (o instanceof IPlaceholder && player != null)
-                sb.append(((IPlaceholder) o).invoke(nagger, player));
-            else sb.append(String.valueOf(o));
+            if (o instanceof IPlaceholder) {
+                try {
+                    sb.append(((IPlaceholder) o).invoke(nagger, player));
+                } catch (NullPointerException ex) {
+                    if (player == null)
+                        sb.append("<requires_player>");
+                    else ex.printStackTrace();
+                }
+            } else sb.append(String.valueOf(o));
         }
         return sb.toString();
     }
@@ -136,6 +142,30 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
     public IPlaceholder<String> tryCache() {
         if (!containsPlaceholders()) return ConstantPlaceholder.of(toString(null));
         return this;
+    }
+
+    /**
+     * Invokes this StringBundle's placeholders with the specified <i>PlaceholderContext</i>
+     *
+     * @param player the player to invoke the placeholders with
+     * @param context the context to save values to
+     * @return a String containing all invoked IPlaceholders
+     */
+    public String toString(Player player, PlaceholderContext context) {
+        StringBuilder sb = new StringBuilder();
+        for (Object o : this) {
+            if (o instanceof IdentifiedPlaceholder) {
+                try {
+                    IdentifiedPlaceholder ip = (IdentifiedPlaceholder) o;
+                    sb.append(context.invoke(player, ip.getIdentifier(), ip.getPlaceholder()));
+                } catch (NullPointerException ex) {
+                    if (player == null)
+                        sb.append("<requires_player>");
+                    else ex.printStackTrace();
+                }
+            } else sb.append(String.valueOf(o));
+        }
+        return sb.toString();
     }
 
     /**
@@ -256,7 +286,9 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
                                     + "did you forget to escape the '%' symbol?");
                             break;
                         }
-                        bundle.add(new Placeholder(builder.toString()));
+                        String identifier = builder.toString();
+                        Placeholder placeholder = new Placeholder(identifier);
+                        bundle.add(new IdentifiedPlaceholder<>(identifier, placeholder));
                         builder = new StringBuilder();
                         break;
                     default:

@@ -1,13 +1,11 @@
 package me.megamichiel.animationlib.animation;
 
 import me.megamichiel.animationlib.Nagger;
+import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.Plugin;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Random;
+import java.util.*;
 
 /**
  * A class that moves through multiple values using 'frames'
@@ -64,10 +62,10 @@ public abstract class Animatable<E> extends ArrayList<E> {
      * Converts a String to <i>E</i>
      *
      * @param nagger the {@link Nagger} to report warnings to
-     * @param str the String to convert to <i>E</i>
+     * @param o the Object to convert to <i>E</i>
      * @return the value created
      */
-    protected E convert(Nagger nagger, String str) {
+    protected E convert(Nagger nagger, Object o) {
         return null;
     }
 
@@ -118,18 +116,57 @@ public abstract class Animatable<E> extends ArrayList<E> {
         this.defaultValue = defaultValue;
         if (section.isConfigurationSection(key)) {
             ConfigurationSection sec = section.getConfigurationSection(key);
-            String str;
-            for (int num = 1; (str = sec.getString(String.valueOf(num))) != null; num++)
-                add(convert(nagger, str));
-            isRandom = sec.getBoolean("random");
+            Map<Integer, Object> values = new HashMap<>();
+            int highest = 1;
+            for (String id : sec.getKeys(false)) {
+                if ("random".equals(id)) {
+                    isRandom = sec.getBoolean(id);
+                    continue;
+                }
+                Object value = getValue(nagger, sec, id);
+                if (value == null) continue;
+                for (String item : id.split(",")) {
+                    item = item.trim();
+                    try {
+                        int num = Integer.parseInt(item);
+                        if (num > 0) {
+                            if (num > highest)
+                                highest = num;
+                            values.put(num, value);
+                        }
+                    } catch (NumberFormatException ex) {
+                        int index = item.indexOf('-');
+                        if (index > 0 && index < item.length() - 1) {
+                            try {
+                                int min = Integer.parseInt(item.substring(0, index)),
+                                        max = Integer.parseInt(item.substring(index + 1));
+                                if (max > highest) highest = max;
+                                for (int i = min; i <= max; i++) values.put(i, value);
+                            } catch (NumberFormatException ex2) {
+                                System.out.println("Invalid number: " + item + '!');
+                            }
+                        }
+                    }
+                }
+            }
+            Object last = null;
+            for (int i = 1; i <= highest; i++) {
+                Object o = values.get(i);
+                if (o != null) last = o;
+                add(convert(nagger, last));
+            }
             return true;
         }
-        String value = section.getString(key);
+        Object value = getValue(nagger, section, key);
         if (value != null) {
             add(convert(nagger, value));
             return true;
         }
         return false;
+    }
+
+    protected Object getValue(Nagger nagger, ConfigurationSection section, String key) {
+        return section.getString(key);
     }
 
     public static <E, A extends Animatable<E>> A load(A animatable, Nagger nagger,
