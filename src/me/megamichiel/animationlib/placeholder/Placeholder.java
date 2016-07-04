@@ -1,5 +1,6 @@
 package me.megamichiel.animationlib.placeholder;
 
+import java.io.File;
 import java.util.Map.Entry;
 
 import me.clip.placeholderapi.PlaceholderAPI;
@@ -63,18 +64,26 @@ public class Placeholder implements IPlaceholder<String> {
         } else {
             final AnimLib lib = AnimLib.getInstance();
             if (!downloading && lib.autoDownloadPlaceholders()) {
-                ExpansionCloudManager manager = PlaceholderAPIPlugin.getInstance().getExpansionCloud();
+                final PlaceholderAPIPlugin papi = PlaceholderAPIPlugin.getInstance();
+                ExpansionCloudManager manager = papi.getExpansionCloud();
                 CloudExpansion expansion = manager.getCloudExpansion(plugin);
                 if (expansion != null) {
                     downloading = true;
                     lib.getLogger().info("Attempting to download expansion " + plugin + "...");
                     manager.downloadExpansion(null, expansion);
+                    final File dir = new File(papi.getDataFolder(), "expansions");
+                    final File file = new File(dir, "Expansion-" + name + ".jar");
                     new BukkitRunnable() {
                         int count = 0;
                         public void run() {
-                            if (getPlaceholder()) {
+                            if (file.exists()) {
                                 lib.getLogger().info("Successfully downloaded " + plugin + "!");
-                                PlaceholderAPIPlugin.getInstance().reloadConf(Bukkit.getConsoleSender());
+                                new BukkitRunnable() {
+                                    @Override
+                                    public void run() {
+                                        papi.reloadConf(Bukkit.getConsoleSender());
+                                    }
+                                }.runTaskLater(lib, 20L);
                             } else if (count++ == 10) {
                                 lib.getLogger().warning("Unable to download expansion " + plugin + "!");
                             } else return;

@@ -154,13 +154,14 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
     public String toString(Player player, PlaceholderContext context) {
         StringBuilder sb = new StringBuilder();
         for (Object o : this) {
-            if (o instanceof IdentifiedPlaceholder) {
+            if (o instanceof IPlaceholder) {
                 try {
-                    IdentifiedPlaceholder ip = (IdentifiedPlaceholder) o;
-                    sb.append(context.invoke(player, ip.getIdentifier(), ip.getPlaceholder()));
+                    if (o instanceof IdentifiedPlaceholder) {
+                        IdentifiedPlaceholder ip = (IdentifiedPlaceholder) o;
+                        sb.append(context.invoke(player, ip.getIdentifier(), ip.getPlaceholder()));
+                    } else sb.append(((IPlaceholder) o).invoke(nagger, player));
                 } catch (NullPointerException ex) {
-                    if (player == null)
-                        sb.append("<requires_player>");
+                    if (player == null) sb.append("<requires_player>");
                     else ex.printStackTrace();
                 }
             } else sb.append(String.valueOf(o));
@@ -248,9 +249,9 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
                 switch (c) {
                     case 'u': //Unicode character
                         try {
-                            index += 4;
                             builder.append((char) Integer.parseInt(
                                     new String(array, index + 1, 4), 16));
+                            index += 4;
                         } catch (StringIndexOutOfBoundsException ex) {
                             nagger.nag("Error on parsing unicode character in string " + str + ": "
                                     + "Expected number to have 4 digits!");

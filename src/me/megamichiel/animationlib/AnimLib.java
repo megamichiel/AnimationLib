@@ -41,7 +41,7 @@ public class AnimLib extends JavaPlugin implements Listener {
         });
         getServer().getPluginManager().registerEvents(this, this);
         saveDefaultConfig();
-        autoDownloadPlaceholders = getConfig().getBoolean("auto-download-placeholders");
+        autoDownloadPlaceholders = getConfig().getBoolean("Auto-Download-Placeholders");
     }
 
     @EventHandler
