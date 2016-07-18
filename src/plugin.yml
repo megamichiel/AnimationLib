@@ -1,4 +1,4 @@
 name: AnimationLib
-version: 1.1.5
-main: me.megamichiel.animationlib.AnimLib
+version: 1.2.0
+main: me.megamichiel.animationlib.bukkit.AnimLibPlugin
 author: megamichiel

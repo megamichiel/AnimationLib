@@ -1,25 +1,24 @@
-package me.megamichiel.animationlib.placeholder;
-
-import java.io.File;
-import java.util.Map.Entry;
+package me.megamichiel.animationlib.bukkit;
 
 import me.clip.placeholderapi.PlaceholderAPI;
 import me.clip.placeholderapi.PlaceholderAPIPlugin;
 import me.clip.placeholderapi.PlaceholderHook;
-
 import me.clip.placeholderapi.expansion.cloud.CloudExpansion;
 import me.clip.placeholderapi.expansion.cloud.ExpansionCloudManager;
-import me.megamichiel.animationlib.AnimLib;
 import me.megamichiel.animationlib.Nagger;
+import me.megamichiel.animationlib.placeholder.IPlaceholder;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+
+import java.io.File;
+import java.util.Map.Entry;
 
 /**
  * An IPlaceholder&lt;String&gt; which utilises the plugin PlaceholderAPI
  *
  */
-public class Placeholder implements IPlaceholder<String> {
+public class PapiPlaceholder implements IPlaceholder<String> {
     
     private static final boolean placeHolder;
     
@@ -39,7 +38,7 @@ public class Placeholder implements IPlaceholder<String> {
     private PlaceholderHook handle;
     private boolean notified = false, downloading = false;
     
-    public Placeholder(String identifier) {
+    public PapiPlaceholder(String identifier) {
         int index = identifier.indexOf('_');
         if (index > 0) {
             plugin = identifier.substring(0, index);
@@ -56,38 +55,34 @@ public class Placeholder implements IPlaceholder<String> {
     }
     
     @Override
-    public String invoke(Nagger nagger, Player who) {
+    public String invoke(Nagger nagger, Object who) {
         if (!placeHolder) return toString();
         if (handle != null || getPlaceholder()) {
-            String str = handle.onPlaceholderRequest(who, name);
+            String str = handle.onPlaceholderRequest((Player) who, name);
             return str != null ? str : "<invalid_argument>";
         } else {
-            final AnimLib lib = AnimLib.getInstance();
+            AnimLibPlugin lib = AnimLibPlugin.getInstance();
             if (!downloading && lib.autoDownloadPlaceholders()) {
-                final PlaceholderAPIPlugin papi = PlaceholderAPIPlugin.getInstance();
+                PlaceholderAPIPlugin papi = PlaceholderAPIPlugin.getInstance();
                 ExpansionCloudManager manager = papi.getExpansionCloud();
                 CloudExpansion expansion = manager.getCloudExpansion(plugin);
                 if (expansion != null) {
                     downloading = true;
                     lib.getLogger().info("Attempting to download expansion " + plugin + "...");
                     manager.downloadExpansion(null, expansion);
-                    final File dir = new File(papi.getDataFolder(), "expansions");
-                    final File file = new File(dir, "Expansion-" + name + ".jar");
+                    File dir = new File(papi.getDataFolder(), "expansions");
+                    File file = new File(dir, "Expansion-" + name + ".jar");
                     new BukkitRunnable() {
                         int count = 0;
                         public void run() {
                             if (file.exists()) {
                                 lib.getLogger().info("Successfully downloaded " + plugin + "!");
-                                new BukkitRunnable() {
-                                    @Override
-                                    public void run() {
-                                        papi.reloadConf(Bukkit.getConsoleSender());
-                                    }
-                                }.runTaskLater(lib, 20L);
+                                Bukkit.getScheduler().runTaskLater(lib,
+                                        () -> papi.reloadConf(Bukkit.getConsoleSender()), 20L);
                             } else if (count++ == 10) {
                                 lib.getLogger().warning("Unable to download expansion " + plugin + "!");
-                            } else return;
-                            cancel();
+                                cancel();
+                            }
                         }
                     }.runTaskTimer(lib, 40L, 40L);
                 }

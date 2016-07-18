@@ -2,8 +2,7 @@ package me.megamichiel.animationlib.placeholder;
 
 import com.google.common.base.Function;
 import me.megamichiel.animationlib.Nagger;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
+import me.megamichiel.animationlib.bukkit.PapiPlaceholder;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,7 +16,17 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
     public static final char BOX = '\u2588';
 
     private static final long serialVersionUID = 5196073861968616865L;
-    
+
+    private static PlaceholderAdapter adapter;
+
+    public static void setAdapter(PlaceholderAdapter adapter) {
+        if (StringBundle.adapter == null) StringBundle.adapter = adapter;
+    }
+
+    public static IPlaceholder<String> createPlaceholder(String identifier) {
+        return adapter.createPlaceholder(identifier);
+    }
+
     private final Nagger nagger;
     
     public StringBundle(Nagger nagger, String value) {
@@ -116,7 +125,7 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
      * @param player the Player to invoke the placeholders with
      */
     @Override
-    public String invoke(Nagger nagger, Player player) {
+    public String invoke(Nagger nagger, Object player) {
         StringBuilder sb = new StringBuilder();
         for (Object o : this) {
             if (o instanceof IPlaceholder) {
@@ -140,7 +149,7 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
      * Returns this StringBundle instance otherwise
      */
     public IPlaceholder<String> tryCache() {
-        if (!containsPlaceholders()) return ConstantPlaceholder.of(toString(null));
+        if (!containsPlaceholders()) return IPlaceholder.constant(toString(null));
         return this;
     }
 
@@ -151,7 +160,7 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
      * @param context the context to save values to
      * @return a String containing all invoked IPlaceholders
      */
-    public String toString(Player player, PlaceholderContext context) {
+    public String toString(Object player, PlaceholderContext context) {
         StringBuilder sb = new StringBuilder();
         for (Object o : this) {
             if (o instanceof IPlaceholder) {
@@ -176,20 +185,32 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
      * @return this StringBundle instance
      */
     public StringBundle colorAmpersands() {
-        for (int i = 0, size = size(); i < size; i++)
-            if (get(i) instanceof String)
-                set(i, ChatColor.translateAlternateColorCodes('&', (String) get(i)));
+        for (int i = 0, size = size(); i < size; i++) {
+            if (get(i) instanceof String) {
+                String str = (String) get(i);
+                char[] b = str.toCharArray();
+
+                for (int j = 0; j < b.length - 1; ++j) {
+                    if (b[j] == '&' && "0123456789AaBbCcDdEeFfKkLlMmNnOoRr".indexOf(b[j + 1]) > -1) {
+                        b[j] = 167;
+                        b[j + 1] = Character.toLowerCase(b[j + 1]);
+                    }
+                }
+
+                set(i, new String(b));
+            }
+        }
         return this;
     }
 
     /**
-     * Invokes {@link #invoke(Nagger, Player)} using the Nagger given in this class' constructor<br/>
+     * Invokes {@link #invoke(Nagger, Object)} using the Nagger given in this class' constructor<br/>
      * 
      *
      * @param player the player to invoke the placeholders with
      * @return a String, containing the result of the placeholders
      */
-    public String toString(Player player) {
+    public String toString(Object player) {
         return invoke(nagger, player);
     }
 
@@ -283,12 +304,12 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
                         while (index < array.length && array[index] != '%')
                             builder.append(array[index++]);
                         if (index == array.length) {
-                            nagger.nag("Placeholder " + builder + " wasn't closed off! Was it a mistake or "
+                            nagger.nag("PapiPlaceholder " + builder + " wasn't closed off! Was it a mistake or "
                                     + "did you forget to escape the '%' symbol?");
                             break;
                         }
                         String identifier = builder.toString();
-                        Placeholder placeholder = new Placeholder(identifier);
+                        IPlaceholder<String> placeholder = adapter.createPlaceholder(identifier);
                         bundle.add(new IdentifiedPlaceholder<>(identifier, placeholder));
                         builder = new StringBuilder();
                         break;
@@ -305,5 +326,9 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
     @Override
     public StringBundle clone() {
         return new StringBundle(nagger, this);
+    }
+
+    public interface PlaceholderAdapter {
+        IPlaceholder<String> createPlaceholder(String identifier);
     }
 }

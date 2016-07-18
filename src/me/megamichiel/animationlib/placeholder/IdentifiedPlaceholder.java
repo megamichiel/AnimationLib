@@ -1,7 +1,6 @@
 package me.megamichiel.animationlib.placeholder;
 
 import me.megamichiel.animationlib.Nagger;
-import org.bukkit.entity.Player;
 
 public class IdentifiedPlaceholder<T> implements IPlaceholder<T> {
 
@@ -22,7 +21,7 @@ public class IdentifiedPlaceholder<T> implements IPlaceholder<T> {
     }
 
     @Override
-    public T invoke(Nagger nagger, Player who) {
+    public T invoke(Nagger nagger, Object who) {
         return placeholder.invoke(nagger, who);
     }
 }

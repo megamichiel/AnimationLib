@@ -1,35 +1,40 @@
 package me.megamichiel.animationlib.placeholder;
 
 import me.megamichiel.animationlib.Nagger;
-import org.bukkit.entity.Player;
 
 /**
- * An interface which can be used to retrieve values from using a {@link Player}
+ * An interface which can be used to retrieve values from using a player
  *
  * @param <T> the type of the placeholder
  */
 public interface IPlaceholder<T> {
 
-    /**
-     * Returns a value using a Player
-     *
-     * @param nagger the nagger to report errors to
-     * @param who the Player to do stuff with
-     * @return a value
-     */
-    T invoke(Nagger nagger, Player who);
+    static <T> IPlaceholder<T> constant(T value) {
+        return (nagger, who) -> value;
+    }
 
     /**
-     * A convenience Placeholder class which holds a single value that it always retrieves
+     * Returns a value using a player
+     *
+     * @param nagger the nagger to report errors to
+     * @param who the player to do stuff with
+     * @return a value
+     */
+    T invoke(Nagger nagger, Object who);
+
+    /**
+     * A convenience placeholder class which holds a single value that it always retrieves
      *
      * @param <T>
+     * @deprecated use IPlaceholder#constant(T) instead
      */
+    @Deprecated
     final class ConstantPlaceholder<T> implements IPlaceholder<T> {
 
         /**
          * Creates a new ConstantPlaceholder, with T as value
          *
-         * @param value the value to retrieve in {@link IPlaceholder#invoke(Nagger, Player)}
+         * @param value the value to retrieve in {@link IPlaceholder#invoke(Nagger, Object)}
          * @param <T> the type of the value
          * @return a new ConstantPlaceholder, which retrieves <i>value</i>
          */
@@ -47,7 +52,7 @@ public interface IPlaceholder<T> {
         }
 
         @Override
-        public T invoke(Nagger nagger, Player who) {
+        public T invoke(Nagger nagger, Object who) {
             return value;
         }
     }

@@ -1,14 +1,13 @@
 package me.megamichiel.animationlib.placeholder;
 
 import me.megamichiel.animationlib.Nagger;
-import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public final class PlaceholderContext {
 
-    private final Map<Player, Map<String, Object>> values = new HashMap<>();
+    private final Map<Object, Map<String, Object>> values = new HashMap<>();
 
     private final Nagger nagger;
 
@@ -16,18 +15,18 @@ public final class PlaceholderContext {
         this.nagger = nagger;
     }
 
-    public Object get(Player who, String identifier) {
+    public Object get(Object who, String identifier) {
         Map<String, Object> map = values.get(who);
         return map != null ? map.get(identifier) : null;
     }
 
-    public void set(Player who, String identifier, Object value) {
+    public void set(Object who, String identifier, Object value) {
         Map<String, Object> map = values.get(who);
         if (map == null) values.put(who, map = new HashMap<>());
         map.put(identifier, value);
     }
 
-    public <T> T invoke(Player who, String identifier, IPlaceholder<T> placeholder) {
+    public <T> T invoke(Object who, String identifier, IPlaceholder<T> placeholder) {
         Map<String, Object> map = values.get(who);
         T result = null;
         if (map == null) values.put(who, map = new HashMap<>());

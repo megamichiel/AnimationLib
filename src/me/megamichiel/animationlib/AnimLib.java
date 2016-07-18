@@ -13,47 +13,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.logging.Level;
 
-public class AnimLib extends JavaPlugin implements Listener {
-
-    private static AnimLib instance;
-
-    private boolean autoDownloadPlaceholders;
-    private String update;
-
-    @Override
-    public void onEnable() {
-        instance = this;
-        getServer().getScheduler().runTaskAsynchronously(this, new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    String update = getVersion(22295);
-                    if (!update.equals(getDescription().getVersion())) {
-                        getLogger().info("A new version is available: " + update);
-                        AnimLib.this.update = DARK_GRAY.toString() + '[' + GOLD + "AnimationLib"
-                                + DARK_GRAY + ']' + GREEN
-                                + " A new version (" + update + ") is available";
-                    }
-                } catch (IOException ex) {
-                    getLogger().warning("Failed to check for updates");
-                }
-            }
-        });
-        getServer().getPluginManager().registerEvents(this, this);
-        saveDefaultConfig();
-        autoDownloadPlaceholders = getConfig().getBoolean("Auto-Download-Placeholders");
-    }
-
-    @EventHandler
-    void playerJoin(PlayerJoinEvent event) {
-        if (update != null
-                && event.getPlayer().hasPermission("animlib.seeupdate"))
-            event.getPlayer().sendMessage(update);
-    }
-
-    public boolean autoDownloadPlaceholders() {
-        return autoDownloadPlaceholders;
-    }
+public interface AnimLib {
 
     /**
      * Retrieves the current version of a resource on spigotmc.org<br/>
@@ -63,7 +23,7 @@ public class AnimLib extends JavaPlugin implements Listener {
      * @return the latest version
      * @throws IOException if it can't connect
      */
-    public static String getVersion(int resource) throws IOException {
+    static String getVersion(int resource) throws IOException {
         HttpURLConnection con = (HttpURLConnection) new URL(
                 "http://www.spigotmc.org/api/general.php").openConnection();
         con.setDoOutput(true);
@@ -77,9 +37,5 @@ public class AnimLib extends JavaPlugin implements Listener {
             return version;
         }
         throw new IOException("Unexpected response");
-    }
-
-    public static AnimLib getInstance() {
-        return instance;
     }
 }

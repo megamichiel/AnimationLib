@@ -1,0 +1,4 @@
+name: AnimationLib
+version: 1.2.0
+main: me.megamichiel.animationlib.bungee.AnimLibPlugin
+author: megamichiel

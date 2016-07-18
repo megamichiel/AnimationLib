@@ -1,9 +1,7 @@
 package me.megamichiel.animationlib.animation;
 
 import me.megamichiel.animationlib.Nagger;
-import org.bukkit.configuration.Configuration;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.plugin.Plugin;
+import me.megamichiel.animationlib.config.AbstractConfig;
 
 import java.util.*;
 
@@ -53,13 +51,12 @@ public abstract class Animatable<E> extends ArrayList<E> {
         if (isRandom) {
             for (int size = size(), prev = frame; frame == prev;) // no frames twice in a row ;3
                 frame = random.nextInt(size);
-        } else if ((++frame) == size())
-            frame = 0;
+        } else if (++frame == size()) frame = 0;
         return current;
     }
 
     /**
-     * Converts a String to <i>E</i>
+     * Converts an Object to <i>E</i>
      *
      * @param nagger the {@link Nagger} to report warnings to
      * @param o the Object to convert to <i>E</i>
@@ -84,7 +81,7 @@ public abstract class Animatable<E> extends ArrayList<E> {
      * @param key the key to get the value from
      * @return true if this Animatable has loaded at least 1 value
      */
-    public boolean load(Nagger nagger, ConfigurationSection section, String key) {
+    public boolean load(Nagger nagger, AbstractConfig section, String key) {
         return load(nagger, section, key, null);
     }
 
@@ -112,13 +109,13 @@ public abstract class Animatable<E> extends ArrayList<E> {
      *
      * @return true if this Animatable has loaded at least 1 value
      */
-    public boolean load(Nagger nagger, ConfigurationSection section, String key, E defaultValue) {
+    public boolean load(Nagger nagger, AbstractConfig section, String key, E defaultValue) {
         this.defaultValue = defaultValue;
-        if (section.isConfigurationSection(key)) {
-            ConfigurationSection sec = section.getConfigurationSection(key);
+        if (section.isSection(key)) {
+            AbstractConfig sec = section.getSection(key);
             Map<Integer, Object> values = new HashMap<>();
             int highest = 1;
-            for (String id : sec.getKeys(false)) {
+            for (String id : sec.keys()) {
                 if ("random".equals(id)) {
                     isRandom = sec.getBoolean(id);
                     continue;
@@ -130,8 +127,7 @@ public abstract class Animatable<E> extends ArrayList<E> {
                     try {
                         int num = Integer.parseInt(item);
                         if (num > 0) {
-                            if (num > highest)
-                                highest = num;
+                            if (num > highest) highest = num;
                             values.put(num, value);
                         }
                     } catch (NumberFormatException ex) {
@@ -140,6 +136,10 @@ public abstract class Animatable<E> extends ArrayList<E> {
                             try {
                                 int min = Integer.parseInt(item.substring(0, index)),
                                         max = Integer.parseInt(item.substring(index + 1));
+                                if (max < min) {
+                                    System.out.println("Max < Min at " + item + "!");
+                                    continue;
+                                }
                                 if (max > highest) highest = max;
                                 for (int i = min; i <= max; i++) values.put(i, value);
                             } catch (NumberFormatException ex2) {
@@ -153,6 +153,9 @@ public abstract class Animatable<E> extends ArrayList<E> {
             for (int i = 1; i <= highest; i++) {
                 Object o = values.get(i);
                 if (o != null) last = o;
+                else if (last == null) {
+                    System.out.println("No frame specified at " + i + " in " + key + "!");
+                }
                 add(convert(nagger, last));
             }
             return true;
@@ -165,12 +168,12 @@ public abstract class Animatable<E> extends ArrayList<E> {
         return false;
     }
 
-    protected Object getValue(Nagger nagger, ConfigurationSection section, String key) {
+    protected Object getValue(Nagger nagger, AbstractConfig section, String key) {
         return section.getString(key);
     }
 
     public static <E, A extends Animatable<E>> A load(A animatable, Nagger nagger,
-                                                      ConfigurationSection section, String key, E def) {
+                                                      AbstractConfig section, String key, E def) {
         animatable.load(nagger, section, key, def);
         return animatable;
     }
