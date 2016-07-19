@@ -9,7 +9,7 @@ public class PlayerCategory extends PlaceholderCategory {
         super("player");
 
         put("name",         (n, p) -> p.getName());
-        put("servername",   (n, p) -> p.getServer().getInfo().getName());
+        put("server",       (n, p) -> p.getServer().getInfo().getName());
         put("displayname",  (n, p) -> p.getDisplayName());
         put("ip",           (n, p) -> p.getAddress().getAddress().getHostAddress());
         put("uuid",         (n, p) -> p.getUniqueId().toString());

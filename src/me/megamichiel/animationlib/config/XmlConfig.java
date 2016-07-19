@@ -1,5 +1,6 @@
 package me.megamichiel.animationlib.config;
 
+import me.megamichiel.animationlib.LazyValue;
 import org.w3c.dom.*;
 import org.xml.sax.InputSource;
 
@@ -16,30 +17,27 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class XmlConfig extends MapConfig {
 
-    private DocumentBuilderFactory factory;
-    private final Transformer transformer;
-
-    {
+    private final Supplier<DocumentBuilderFactory> factory = LazyValue.of(DocumentBuilderFactory::newInstance);
+    private final Supplier<Transformer> transformer = LazyValue.of(() -> {
         try {
-            transformer = TransformerFactory.newInstance().newTransformer();
-            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+            Transformer tf = TransformerFactory.newInstance().newTransformer();
+            tf.setOutputProperty(OutputKeys.INDENT, "yes");
+            tf.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+            tf.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+            return tf;
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
-    }
+    });
 
     @Override
     public String saveToString() {
         try {
-            if (factory == null)
-                factory = DocumentBuilderFactory.newInstance();
-
-            Document doc = factory.newDocumentBuilder().newDocument();
+            Document doc = factory.get().newDocumentBuilder().newDocument();
 
             Element head = doc.createElement("config");
 
@@ -48,7 +46,7 @@ public class XmlConfig extends MapConfig {
             doc.appendChild(head);
 
             StringWriter writer = new StringWriter();
-            transformer.transform(new DOMSource(doc), new StreamResult(writer));
+            transformer.get().transform(new DOMSource(doc), new StreamResult(writer));
 
             return writer.getBuffer().toString();
         } catch (Exception ex) {
@@ -73,10 +71,8 @@ public class XmlConfig extends MapConfig {
 
     private void save(Document doc, List<?> list, Element node) {
         node.setAttribute("type", "list");
-        for (int i = 0, size = list.size(); i < size; i++) {
-            Object o = list.get(i);
+        for (Object o : list) {
             Element item = doc.createElement("item");
-            item.setAttribute("index", Integer.toString(i + 1));
 
             if (o instanceof Map) save(doc, (Map) o, item);
             else if (o instanceof List) save(doc, (List) o, item);
@@ -90,26 +86,25 @@ public class XmlConfig extends MapConfig {
     public XmlConfig loadFromString(String dump) {
         super.loadFromString(dump);
 
-        if (factory == null)
-            factory = DocumentBuilderFactory.newInstance();
-
         try {
-            DocumentBuilder builder = factory.newDocumentBuilder();
+            DocumentBuilder builder = factory.get().newDocumentBuilder();
 
             Document doc = builder.parse(new InputSource(new StringReader(dump)));;
 
-            Map<String, Object> map = new HashMap<>();
+            Element ele = doc.getDocumentElement();
+            if (ele != null && "config".equals(ele.getTagName())) {
+                Map<String, Object> map = new HashMap<>();
 
-            NodeList children = doc.getChildNodes();
-            for (int i = 0, length = children.getLength(); i < length; i++) {
-                Node item = children.item(i);
-                if (item instanceof Element) {
-                    Object value = load((Element) item);
-                    if (value != null)
-                        map.put(((Element) item).getTagName(), value);
+                NodeList children = doc.getChildNodes();
+                for (int i = 0, length = children.getLength(); i < length; i++) {
+                    Node item = children.item(i);
+                    if (item instanceof Element) {
+                        Object value = load((Element) item);
+                        if (value != null) map.put(((Element) item).getTagName(), value);
+                    }
                 }
+                setAll(map);
             }
-            deserialize(m -> m, map);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -118,41 +113,31 @@ public class XmlConfig extends MapConfig {
     }
 
     private Object load(Element node) {
-        switch (node.getNodeType()) {
-            case 1: case 9:
-                NodeList children = node.getChildNodes();
-                int length = children.getLength();
-                if (node.hasAttribute("type") && "list".equals(node.getAttribute("type"))) {
-                    List<Object> list = new ArrayList<>();
-                    NodeList items = node.getElementsByTagName("item");
-                    length = items.getLength();
-                    for (int i = 1; ; i++) {
-                        String s = Integer.toString(i);
-                        boolean found = false;
-                        for (int j = 0; j < length; j++) {
-                            Node item = items.item(j);
-                            if (item instanceof Element
-                                    && s.equals(((Element) item).getAttribute("index"))) {
-                                list.add(load((Element) item));
-                                found = true;
-                                break;
-                            }
-                        }
-                        if (!found) return list;
-                    }
-                }
-                if (length == 1 && children.item(0) instanceof Text)
-                    return ((Text) children.item(0)).getWholeText();
-                Map<String, Object> map = new HashMap<>();
+        short type = node.getNodeType();
+        if (type == 1 || type == 9) {
+            NodeList children = node.getChildNodes();
+            int length = children.getLength();
+            if (node.hasAttribute("type") && "list".equals(node.getAttribute("type"))) {
+                List<Object> list = new ArrayList<>();
                 for (int i = 0; i < length; i++) {
                     Node item = children.item(i);
-                    if (item instanceof Element) {
-                        Object value = load((Element) item);
-                        if (value != null)
-                            map.put(((Element) item).getTagName(), value);
-                    }
+                    if (item instanceof Element && "item".equals(((Element) item).getTagName()))
+                        list.add(load((Element) item));
                 }
-                return map;
+                return list;
+            }
+            if (length == 1 && children.item(0) instanceof Text)
+                return ((Text) children.item(0)).getWholeText();
+            Map<String, Object> map = new HashMap<>();
+            for (int i = 0; i < length; i++) {
+                Node item = children.item(i);
+                if (item instanceof Element) {
+                    Object value = load((Element) item);
+                    if (value != null)
+                        map.put(((Element) item).getTagName(), value);
+                }
+            }
+            return map;
         }
         return null;
     }
@@ -160,8 +145,7 @@ public class XmlConfig extends MapConfig {
     @Override
     public void setIndent(int indent) {
         super.setIndent(indent);
-        transformer.setOutputProperty(
-                "{http://xml.apache.org/xslt}indent-amount",
-                Integer.toString(indent));
+        transformer.get().setOutputProperty(
+                "{http://xml.apache.org/xslt}indent-amount", Integer.toString(indent));
     }
 }

@@ -277,40 +277,35 @@ public class MapConfig extends AbstractConfig implements Serializable {
                   yaml = new YamlConfig(),
                   xml  = new XmlConfig();
 
+        gson.setIndent(4);
+        yaml.setIndent(4);
+        xml.setIndent(4);
+
         gson.set("key", "value");
         gson.set("path.to.another.key", "1234");
         gson.set("path.to.array",
                 new double[][] { { 3.5, 1, 6.8 }, { 1, 17.35 } });
-        gson.setIndent(4);
 
-        String saved = gson.saveToString();
-
-        System.out.println(saved);
-
-        gson = new GsonConfig().loadFromString(saved);
+        String savedGson = gson.saveToString();
+        gson = new GsonConfig().loadFromString(savedGson);
 
         yaml.set("very.long.path.to.a.number", 1337);
         yaml.set("feb.key", false);
         yaml.setAll(gson);
-        yaml.setIndent(4);
 
-        saved = yaml.saveToString();
-
-        System.out.println(saved);
-
-        yaml = new YamlConfig().loadFromString(saved);
+        String savedYaml = yaml.saveToString();
+        yaml = new YamlConfig().loadFromString(savedYaml);
 
         xml.set("some.very.random.long", ThreadLocalRandom.current().nextLong());
-        xml.set("some.sort.of.list", Arrays.asList(5, "text", true, new int[2]));
+        xml.set("some.sort.of.list", Arrays.asList(5, "text", true, new int[] { 23, 2130, 42, 14 }));
         xml.setAll(yaml);
-        xml.setIndent(4);
 
-        saved = xml.saveToString();
+        String savedXml = xml.saveToString();
+        xml = new XmlConfig().loadFromString(savedXml);
 
-        System.out.println(saved);
-
-        xml = new XmlConfig().loadFromString(saved);
-
+        System.out.println(savedGson);
+        System.out.println(savedYaml);
+        System.out.println(savedXml);
         System.out.println(xml);
     }
 }

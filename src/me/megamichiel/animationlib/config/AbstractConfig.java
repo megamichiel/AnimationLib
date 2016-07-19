@@ -134,7 +134,7 @@ public abstract class AbstractConfig {
         return o instanceof Number || o instanceof Boolean;
     }
 
-    public <I, O> Function<I, O> silentCast(Class<O> target) {
+    public static <I, O> Function<I, O> silentCast(Class<O> target) {
         return i -> target.isInstance(i) ? target.cast(i) : null;
     }
 }
