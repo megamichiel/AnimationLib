@@ -1,6 +1,7 @@
-package me.megamichiel.animationlib.config;
+package me.megamichiel.animationlib.config.type;
 
 import me.megamichiel.animationlib.LazyValue;
+import me.megamichiel.animationlib.config.MapConfig;
 import org.w3c.dom.*;
 import org.xml.sax.InputSource;
 

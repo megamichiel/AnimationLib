@@ -1,16 +1,19 @@
-package me.megamichiel.animationlib.config;
+package me.megamichiel.animationlib.config.type;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonWriter;
+import me.megamichiel.animationlib.LazyValue;
+import me.megamichiel.animationlib.config.MapConfig;
 
 import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class GsonConfig extends MapConfig {
 
-    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private final Supplier<Gson> gson = LazyValue.of(() -> new GsonBuilder().setPrettyPrinting().create());
     private String indent = "    ";
 
     public GsonConfig() {
@@ -24,7 +27,7 @@ public class GsonConfig extends MapConfig {
     @Override
     public GsonConfig loadFromString(String gson) {
         super.loadFromString(gson);
-        deserialize(map -> map, this.gson.fromJson(gson, HashMap.class));
+        setAll(this.gson.get().fromJson(gson, HashMap.class));
         return this;
     }
 
@@ -34,7 +37,7 @@ public class GsonConfig extends MapConfig {
         JsonWriter writer = new JsonWriter(string);
         writer.setIndent(indent);
 
-        gson.toJson(toRawMap(), Map.class, writer);
+        gson.get().toJson(toRawMap(), Map.class, writer);
         return string.toString();
     }
 

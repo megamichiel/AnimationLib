@@ -2,7 +2,7 @@ package me.megamichiel.animationlib.bungee;
 
 import me.megamichiel.animationlib.AnimLib;
 import me.megamichiel.animationlib.config.ConfigManager;
-import me.megamichiel.animationlib.config.YamlConfig;
+import me.megamichiel.animationlib.config.type.YamlConfig;
 import me.megamichiel.animationlib.placeholder.StringBundle;
 import net.md_5.bungee.api.plugin.Plugin;
 

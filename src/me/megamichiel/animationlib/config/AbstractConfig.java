@@ -1,5 +1,8 @@
 package me.megamichiel.animationlib.config;
 
+import me.megamichiel.animationlib.config.serialize.ConfigTypeSerializer;
+import me.megamichiel.animationlib.config.serialize.ConfigurationSerializationException;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -16,7 +19,7 @@ public abstract class AbstractConfig {
 
     public abstract void setAll(AbstractConfig config);
 
-    public abstract void setAll(Map<String, Object> map);
+    public abstract void setAll(Map<?, ?> map);
 
     public abstract Object get(String path);
 
@@ -129,6 +132,20 @@ public abstract class AbstractConfig {
     public abstract AbstractConfig loadFromFile(File file) throws IOException;
 
     public abstract void save(File file) throws IOException;
+
+    public <T> T loadAsClass(Class<T> clazz) throws ConfigurationSerializationException {
+        return new ConfigTypeSerializer(this).loadAsClass(clazz);
+    }
+
+    public <T> T loadAsClass(Class<T> clazz,
+                             ConfigTypeSerializer.DeserializationContext... ctx)
+        throws ConfigurationSerializationException {
+        return new ConfigTypeSerializer(this).addDeserializationContext(ctx).loadAsClass(clazz);
+    }
+
+    public void saveObject(Object o) {
+        new ConfigTypeSerializer(this).saveObject(o);
+    }
 
     private static boolean isPrimitiveWrapper(Object o) {
         return o instanceof Number || o instanceof Boolean;

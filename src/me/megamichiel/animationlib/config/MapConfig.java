@@ -1,10 +1,20 @@
 package me.megamichiel.animationlib.config;
 
+import com.google.common.base.Objects;
+import me.megamichiel.animationlib.config.serialize.ConfigTypeSerializer;
+import me.megamichiel.animationlib.config.serialize.ConfigurationSerializationException;
+import me.megamichiel.animationlib.config.type.Base64Config;
+import me.megamichiel.animationlib.config.type.GsonConfig;
+import me.megamichiel.animationlib.config.type.XmlConfig;
+import me.megamichiel.animationlib.config.type.YamlConfig;
+
 import java.io.*;
 import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
+
+import static java.lang.System.out;
 
 public class MapConfig extends AbstractConfig implements Serializable {
 
@@ -51,6 +61,13 @@ public class MapConfig extends AbstractConfig implements Serializable {
                 } catch (NumberFormatException ex) {
                     return s;
                 }
+            } else if (o instanceof Double) {
+                double d = (double) o;
+                long l = (long) d;
+                if (l == d) {
+                    if (l >= Integer.MIN_VALUE && l <= Integer.MAX_VALUE) return (int) l;
+                    return l;
+                }
             }
         } else if (o != null && o.getClass().isArray()) {
             List<Object> list = new ArrayList<>();
@@ -62,7 +79,7 @@ public class MapConfig extends AbstractConfig implements Serializable {
     }
 
     private Map<String, Object> mapValues(Map<?, ?> map) {
-        Map<String, Object> result = new HashMap<>();
+        Map<String, Object> result = new LinkedHashMap<>();
         for (Map.Entry<?, ?> entry : map.entrySet())
             result.put(keyMapper.apply(entry.getKey().toString()),
                     mapValue(entry.getValue()));
@@ -86,7 +103,7 @@ public class MapConfig extends AbstractConfig implements Serializable {
     }
 
     public MapConfig(boolean caseInsensitive) {
-        parent = new HashMap<>();
+        parent = new LinkedHashMap<>();
         keyMapper = caseInsensitive ? TO_LOWER : Function.identity();
     }
 
@@ -114,7 +131,7 @@ public class MapConfig extends AbstractConfig implements Serializable {
     }
 
     @Override
-    public void setAll(Map<String, Object> map) {
+    public void setAll(Map<?, ?> map) {
         parent.putAll(mapValues(map));
     }
 
@@ -139,7 +156,7 @@ public class MapConfig extends AbstractConfig implements Serializable {
 
     @Override
     public Map<String, Object> values() {
-        return new HashMap<>(parent);
+        return new LinkedHashMap<>(parent);
     }
 
     @Override
@@ -161,7 +178,7 @@ public class MapConfig extends AbstractConfig implements Serializable {
 
     @Override
     public Map<String, Object> deepValues() {
-        Map<String, Object> map = new HashMap<>();
+        Map<String, Object> map = new LinkedHashMap<>();
         deepValues(parent, map, "");
         return map;
     }
@@ -177,17 +194,12 @@ public class MapConfig extends AbstractConfig implements Serializable {
     }
 
     @Override
-    public String toString() {
-        return parent.toString();
-    }
-
-    @Override
     public Map<String, Object> toRawMap() {
         return convertToRaw(parent);
     }
 
     private Map<String, Object> convertToRaw(Map<?, ?> map) {
-        Map<String, Object> result = new HashMap<>();
+        Map<String, Object> result = new LinkedHashMap<>();
         for (Map.Entry entry : map.entrySet()) {
             String key = entry.getKey().toString();
             Object value = entry.getValue();
@@ -246,6 +258,11 @@ public class MapConfig extends AbstractConfig implements Serializable {
         stream.close();
     }
 
+    @Override
+    public String toString() {
+        return parent.toString();
+    }
+
     private void writeObject(ObjectOutputStream stream) throws IOException {
         stream.defaultWriteObject();
         stream.writeBoolean(keyMapper == TO_LOWER); // Case insensitive
@@ -254,10 +271,6 @@ public class MapConfig extends AbstractConfig implements Serializable {
     private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
         stream.defaultReadObject();
         keyMapper = stream.readBoolean() ? TO_LOWER : Function.identity();
-    }
-
-    private static boolean isPrimitiveWrapper(Object o) {
-        return o instanceof Number || o instanceof Boolean;
     }
 
     public boolean isSection(String path) {
@@ -272,10 +285,59 @@ public class MapConfig extends AbstractConfig implements Serializable {
         Map deserialize(T serialized);
     }
 
+    enum Gender {
+        UNSPECIFIED, MALE, FEMALE
+    }
+    public static class Animal {
+        private String name;
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+    public static class Person {
+        private String name;
+        private int age;
+        private Gender gender;
+        private Animal favouriteAnimal;
+        private Person[] children;
+        private int[][] multiArray;
+
+        @Override
+        public String toString() {
+            return Objects.toStringHelper(this)
+                    .add("name", name)
+                    .add("age", age)
+                    .add("gender", gender.name().toLowerCase())
+                    .add("favouriteAnimal", favouriteAnimal)
+                    .add("children", Arrays.toString(children))
+                    .add("multiArray", Arrays.deepToString(multiArray))
+                    .toString();
+        }
+    }
+
     public static void main(String[] args) {
+        String personGson = "{name:Mike, age: 45, gender: male, children:[{age: 16, name: Pepe, favourite-animal: {name: Doge}, 'multi-array': [[1, 2, 3], [4, 5, 6]]}]}";
+        MapConfig test = new GsonConfig().loadFromString(personGson);
+        System.out.println(test);
+        try {
+            Person instance = test.loadAsClass(Person.class,
+                    ConfigTypeSerializer.ENUM_DEFAULTS,
+                    ConfigTypeSerializer.EMPTY_ARRAYS,
+                    ConfigTypeSerializer.PRIMITIVE_DEFAULTS);
+            out.println(instance);
+            test = new YamlConfig();
+            test.saveObject(instance);
+            out.println(test.saveToString());
+        } catch (ConfigurationSerializationException e) {
+            e.printStackTrace();
+        }
+
         MapConfig gson = new GsonConfig(),
                   yaml = new YamlConfig(),
-                  xml  = new XmlConfig();
+                  xml  = new XmlConfig(),
+                  base64 = new Base64Config();
 
         gson.setIndent(4);
         yaml.setIndent(4);
@@ -303,9 +365,20 @@ public class MapConfig extends AbstractConfig implements Serializable {
         String savedXml = xml.saveToString();
         xml = new XmlConfig().loadFromString(savedXml);
 
-        System.out.println(savedGson);
-        System.out.println(savedYaml);
-        System.out.println(savedXml);
-        System.out.println(xml);
+        base64.set("another.super.random.key", ThreadLocalRandom.current().nextDouble());
+        base64.set("dank.memes.are.life", "Memes");
+        base64.setAll(xml);
+
+        String savedBase64 = base64.saveToString();
+        base64 = new Base64Config().loadFromString(savedBase64);
+
+        out.println(savedGson);
+        out.println(savedYaml);
+        out.println(savedXml);
+        out.println(savedBase64);
+        out.println(gson);
+        out.println(yaml);
+        out.println(xml);
+        out.println(base64);
     }
 }

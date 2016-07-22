@@ -26,7 +26,13 @@ public class ConfigManager<C extends AbstractConfig> {
         return this;
     }
 
+    private void checkState() {
+        if (configFile == null)
+            throw new IllegalStateException("file(File) has not been called yet!");
+    }
+
     public void saveDefaultConfig(Supplier<InputStream> defaults) {
+        checkState();
         if (!configFile.exists() && configFile.getParentFile().mkdirs()) {
             try {
                 if (configFile.createNewFile()) {
@@ -49,6 +55,7 @@ public class ConfigManager<C extends AbstractConfig> {
     }
 
     public void reloadConfig() {
+        checkState();
         try {
             (config = configSupplier.get()).loadFromFile(configFile);
         } catch (IOException e) {
@@ -62,6 +69,7 @@ public class ConfigManager<C extends AbstractConfig> {
     }
 
     public void saveConfig() {
+        checkState();
         try {
             getConfig().save(configFile);
         } catch (Exception e) {
