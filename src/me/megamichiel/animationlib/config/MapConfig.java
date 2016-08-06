@@ -1,20 +1,9 @@
 package me.megamichiel.animationlib.config;
 
-import com.google.common.base.Objects;
-import me.megamichiel.animationlib.config.serialize.ConfigTypeSerializer;
-import me.megamichiel.animationlib.config.serialize.ConfigurationSerializationException;
-import me.megamichiel.animationlib.config.type.Base64Config;
-import me.megamichiel.animationlib.config.type.GsonConfig;
-import me.megamichiel.animationlib.config.type.XmlConfig;
-import me.megamichiel.animationlib.config.type.YamlConfig;
-
 import java.io.*;
 import java.lang.reflect.Array;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
-
-import static java.lang.System.out;
 
 public class MapConfig extends AbstractConfig implements Serializable {
 
@@ -263,6 +252,16 @@ public class MapConfig extends AbstractConfig implements Serializable {
         return parent.toString();
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof MapConfig && ((MapConfig) obj).parent.equals(parent);
+    }
+
+    @Override
+    public int hashCode() {
+        return parent.hashCode();
+    }
+
     private void writeObject(ObjectOutputStream stream) throws IOException {
         stream.defaultWriteObject();
         stream.writeBoolean(keyMapper == TO_LOWER); // Case insensitive
@@ -283,102 +282,5 @@ public class MapConfig extends AbstractConfig implements Serializable {
 
     public interface ConfigDeserializer<T> {
         Map deserialize(T serialized);
-    }
-
-    enum Gender {
-        UNSPECIFIED, MALE, FEMALE
-    }
-    public static class Animal {
-        private String name;
-
-        @Override
-        public String toString() {
-            return name;
-        }
-    }
-    public static class Person {
-        private String name;
-        private int age;
-        private Gender gender;
-        private Animal favouriteAnimal;
-        private Person[] children;
-        private int[][] multiArray;
-
-        @Override
-        public String toString() {
-            return Objects.toStringHelper(this)
-                    .add("name", name)
-                    .add("age", age)
-                    .add("gender", gender.name().toLowerCase())
-                    .add("favouriteAnimal", favouriteAnimal)
-                    .add("children", Arrays.toString(children))
-                    .add("multiArray", Arrays.deepToString(multiArray))
-                    .toString();
-        }
-    }
-
-    public static void main(String[] args) {
-        String personGson = "{name:Mike, age: 45, gender: male, children:[{age: 16, name: Pepe, favourite-animal: {name: Doge}, 'multi-array': [[1, 2, 3], [4, 5, 6]]}]}";
-        MapConfig test = new GsonConfig().loadFromString(personGson);
-        System.out.println(test);
-        try {
-            Person instance = test.loadAsClass(Person.class,
-                    ConfigTypeSerializer.ENUM_DEFAULTS,
-                    ConfigTypeSerializer.EMPTY_ARRAYS,
-                    ConfigTypeSerializer.PRIMITIVE_DEFAULTS);
-            out.println(instance);
-            test = new YamlConfig();
-            test.saveObject(instance);
-            out.println(test.saveToString());
-        } catch (ConfigurationSerializationException e) {
-            e.printStackTrace();
-        }
-
-        MapConfig gson = new GsonConfig(),
-                  yaml = new YamlConfig(),
-                  xml  = new XmlConfig(),
-                  base64 = new Base64Config();
-
-        gson.setIndent(4);
-        yaml.setIndent(4);
-        xml.setIndent(4);
-
-        gson.set("key", "value");
-        gson.set("path.to.another.key", "1234");
-        gson.set("path.to.array",
-                new double[][] { { 3.5, 1, 6.8 }, { 1, 17.35 } });
-
-        String savedGson = gson.saveToString();
-        gson = new GsonConfig().loadFromString(savedGson);
-
-        yaml.set("very.long.path.to.a.number", 1337);
-        yaml.set("feb.key", false);
-        yaml.setAll(gson);
-
-        String savedYaml = yaml.saveToString();
-        yaml = new YamlConfig().loadFromString(savedYaml);
-
-        xml.set("some.very.random.long", ThreadLocalRandom.current().nextLong());
-        xml.set("some.sort.of.list", Arrays.asList(5, "text", true, new int[] { 23, 2130, 42, 14 }));
-        xml.setAll(yaml);
-
-        String savedXml = xml.saveToString();
-        xml = new XmlConfig().loadFromString(savedXml);
-
-        base64.set("another.super.random.key", ThreadLocalRandom.current().nextDouble());
-        base64.set("dank.memes.are.life", "Memes");
-        base64.setAll(xml);
-
-        String savedBase64 = base64.saveToString();
-        base64 = new Base64Config().loadFromString(savedBase64);
-
-        out.println(savedGson);
-        out.println(savedYaml);
-        out.println(savedXml);
-        out.println(savedBase64);
-        out.println(gson);
-        out.println(yaml);
-        out.println(xml);
-        out.println(base64);
     }
 }

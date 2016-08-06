@@ -1,6 +1,7 @@
 package me.megamichiel.animationlib.bungee.category;
 
 import com.google.common.base.Function;
+import me.megamichiel.animationlib.bungee.AnimLibPlugin;
 import me.megamichiel.animationlib.bungee.RegisteredPlaceholder;
 import net.md_5.bungee.BungeeCord;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
@@ -32,4 +33,8 @@ public abstract class PlaceholderCategory {
     protected BungeeCord getServer() {
         return BungeeCord.getInstance();
     }
+
+    public void onEnable(AnimLibPlugin plugin) {}
+
+    public void onDisable() {}
 }

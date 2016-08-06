@@ -4,13 +4,16 @@ import me.megamichiel.animationlib.AnimLib;
 import me.megamichiel.animationlib.config.ConfigManager;
 import me.megamichiel.animationlib.config.type.YamlConfig;
 import me.megamichiel.animationlib.placeholder.StringBundle;
+import me.megamichiel.animationlib.util.LoggerNagger;
 import net.md_5.bungee.api.plugin.Plugin;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-public class AnimLibPlugin extends Plugin implements AnimLib {
+import static me.megamichiel.animationlib.placeholder.StringBundle.colorAmpersands;
+
+public class AnimLibPlugin extends Plugin implements AnimLib, LoggerNagger {
 
     private static AnimLibPlugin instance;
 
@@ -25,6 +28,7 @@ public class AnimLibPlugin extends Plugin implements AnimLib {
 
     @Override
     public void onEnable() {
+        BungeePlaceholder.onEnable(this);
         getProxy().getScheduler().runAsync(this, () -> {
             try {
                 String update = AnimLib.getVersion(22295);
@@ -39,8 +43,8 @@ public class AnimLibPlugin extends Plugin implements AnimLib {
                 .file(new File(getDataFolder(), "config.yml"));
         config.saveDefaultConfig(() -> getResourceAsStream("config_bungee.yml"));
         YamlConfig cfg = config.getConfig();
-        booleanTrue = cfg.getString("boolean.true", "yes");
-        booleanFalse = cfg.getString("boolean.false", "no");
+        booleanTrue = colorAmpersands(cfg.getString("boolean.true", "yes"));
+        booleanFalse = colorAmpersands(cfg.getString("boolean.false", "no"));
     }
 
     public String booleanTrue() {
@@ -60,71 +64,50 @@ public class AnimLibPlugin extends Plugin implements AnimLib {
     }
 
     public static String getTime(int seconds) {
-        if (seconds < 60) {
-            return seconds + "s";
-        }
+        if (seconds < 60) return seconds + "s";
         int minutes = seconds / 60;
 
         int s = 60 * minutes;
 
         int secondsLeft = seconds - s;
-        if (minutes < 60)
-        {
-            if (secondsLeft > 0) {
-                return String.valueOf(minutes + "m " + secondsLeft + "s");
-            }
+        if (minutes < 60) {
+            if (secondsLeft > 0) return String.valueOf(minutes + "m " + secondsLeft + "s");
             return String.valueOf(minutes + "m");
         }
-        if (minutes < 1440)
-        {
-            String time = "";
-
+        StringBuilder time = new StringBuilder();
+        if (minutes < 1440) {
             int hours = minutes / 60;
 
-            time = hours + "h";
+            time.append(hours).append('h');
 
             int inMins = 60 * hours;
 
             int leftOver = minutes - inMins;
-            if (leftOver >= 1) {
-                time = time + " " + leftOver + "m";
-            }
-            if (secondsLeft > 0) {
-                time = time + " " + secondsLeft + "s";
-            }
-            return time;
+            if (leftOver >= 1) time.append(' ').append(leftOver).append('m');
+            if (secondsLeft > 0) time.append(' ').append(secondsLeft).append('s');
+            return time.toString();
         }
-        String time = "";
-
         int days = minutes / 1440;
 
-        time = days + "d";
+        time.append(days).append('d');
 
         int inMins = 1440 * days;
 
         int leftOver = minutes - inMins;
         if (leftOver >= 1) {
-            if (leftOver < 60)
-            {
-                time = time + " " + leftOver + "m";
-            }
-            else
-            {
+            if (leftOver < 60) time.append(' ').append(leftOver).append('m');
+            else {
                 int hours = leftOver / 60;
 
-                time = time + " " + hours + "h";
+                time.append(' ').append(hours).append('h');
 
                 int hoursInMins = 60 * hours;
 
                 int minsLeft = leftOver - hoursInMins;
-                if (leftOver >= 1) {
-                    time = time + " " + minsLeft + "m";
-                }
+                if (leftOver >= 1) time.append(' ').append(minsLeft).append('m');
             }
         }
-        if (secondsLeft > 0) {
-            time = time + " " + secondsLeft + "s";
-        }
-        return time;
+        if (secondsLeft > 0) time.append(' ').append(secondsLeft).append('s');
+        return time.toString();
     }
 }

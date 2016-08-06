@@ -3,6 +3,8 @@ package me.megamichiel.animationlib.animation;
 import com.google.common.base.Joiner;
 import me.megamichiel.animationlib.Nagger;
 
+import java.util.Locale;
+
 /**
  * An Animatable to be used with Enum values
  *
@@ -34,7 +36,7 @@ public class AnimatedEnum<E extends Enum<E>> extends Animatable<E> {
     @Override
     protected E convert(Nagger nagger, Object str) {
         try {
-            return Enum.valueOf(clazz, str.toString().toUpperCase().replace('-', '_'));
+            return Enum.valueOf(clazz, str.toString().toUpperCase(Locale.US).replace('-', '_'));
         } catch (IllegalArgumentException ex) {
             nagger.nag("Couldn't find " + clazz.getSimpleName() + " by id " + str + '!');
             nagger.nag("Possible values: " + Joiner.on(", ").join(clazz.getEnumConstants()).toLowerCase().replace('_', '-'));

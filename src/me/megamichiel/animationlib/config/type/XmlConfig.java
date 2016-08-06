@@ -15,7 +15,7 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -94,9 +94,9 @@ public class XmlConfig extends MapConfig {
 
             Element ele = doc.getDocumentElement();
             if (ele != null && "config".equals(ele.getTagName())) {
-                Map<String, Object> map = new HashMap<>();
+                Map<String, Object> map = new LinkedHashMap<>();
 
-                NodeList children = doc.getChildNodes();
+                NodeList children = doc.getChildNodes().item(0).getChildNodes();
                 for (int i = 0, length = children.getLength(); i < length; i++) {
                     Node item = children.item(i);
                     if (item instanceof Element) {
@@ -129,7 +129,7 @@ public class XmlConfig extends MapConfig {
             }
             if (length == 1 && children.item(0) instanceof Text)
                 return ((Text) children.item(0)).getWholeText();
-            Map<String, Object> map = new HashMap<>();
+            Map<String, Object> map = new LinkedHashMap<>();
             for (int i = 0; i < length; i++) {
                 Node item = children.item(i);
                 if (item instanceof Element) {

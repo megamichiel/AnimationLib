@@ -1,8 +1,8 @@
 package me.megamichiel.animationlib.config.serialize;
 
-import me.megamichiel.animationlib.DynamicSwitch;
 import me.megamichiel.animationlib.config.AbstractConfig;
 import me.megamichiel.animationlib.config.MapConfig;
+import me.megamichiel.animationlib.util.DynamicSwitch;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -10,32 +10,31 @@ import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.function.BiFunction;
 
-import static me.megamichiel.animationlib.DynamicSwitch.Case;
+import static me.megamichiel.animationlib.util.DynamicSwitch.Case;
 
 public class ConfigTypeSerializer {
 
+    private static final DynamicSwitch<Class> primitiveDefaults = DynamicSwitch.of(
+            Case(boolean.class, () -> Boolean.FALSE),
+            Case(char.class, (char) 0),
+            Case(byte.class, (byte) 0),
+            Case(short.class, (short) 0),
+            Case(int.class, 0),
+            Case(long.class, 0L),
+            Case(float.class, 0F),
+            Case(double.class, 0D)
+    );
+
     public static final DeserializationContext EMPTY_ARRAYS = field -> {
-        if (field.getType().isArray()) return Array.newInstance(
-                field.getType().getComponentType(), 0);
-        return null;
+        return field.getType().isArray() ? Array.newInstance(
+                field.getType().getComponentType(), 0) : null;
     }, PRIMITIVE_DEFAULTS = field -> {
         Class<?> type = field.getType();
-        if (type.isPrimitive()) switch (type.getName()) {
-            case "boolean": return false;
-            case "char": return (char) 0;
-            case "byte": return (byte) 0;
-            case "short": return (short) 0;
-            case "int": return 0;
-            case "long": return 0L;
-            case "float": return 0F;
-            case "double": return 0D;
-        }
-        return null;
+        return type.isPrimitive() ? primitiveDefaults.apply(type) : null;
     }, ENUM_DEFAULTS = field -> {
         Class<?> type = field.getType();
         return type.isEnum() ? type.getEnumConstants()[0] : null;
     };
-
 
     public static Class<?> getArrayComponent(Class<?> array) {
         while (array.isArray()) array = array.getComponentType();
@@ -209,6 +208,8 @@ public class ConfigTypeSerializer {
                     ConfigurationSerializationException.Type.INVALID_TYPE,
                     new ClassCastException(), "Expected a boolean, got " + className(configValue));
         } else if (type == Character.TYPE) {
+            if (configValue instanceof Character)
+                return configValue;
             if (configValue instanceof Number)
                 return (char) ((Number) configValue).intValue();
             if (configValue instanceof String && ((String) configValue).length() == 1)
@@ -357,17 +358,16 @@ public class ConfigTypeSerializer {
                 Class<?> type = field.getType();
                 String configName = getConfigName(field),
                         fPath = path(path, configName);
-                Object serialized = null;
                 try {
-                    serialized = field.get(o);
-                    if (serialized != null)
-                        serialized = serialize(serialized, type, fPath);
+                    Object value = field.get(o);
+                    if (value != null) {
+                        config.set(configName, serialize(value, type, fPath));
+                    }
                 } catch (IllegalAccessException ex) {
                     throw new ConfigurationSerializationException(fPath,
                             ConfigurationSerializationException.Type.NO_FIELD_ACCESS,
                             ex, "Cannot get value from field " + field);
                 }
-                if (serialized != null) config.set(configName, serialized);
                 if (!accessible) field.setAccessible(false);
             }
         }
@@ -390,7 +390,10 @@ public class ConfigTypeSerializer {
                     result.add(value);
             }
             return result;
-        } else if (type.isPrimitive() || primitiveWrappers.contains(type)) {
+        }
+        boolean primitive = type.isPrimitive();
+        if (primitive || primitiveWrappers.contains(type)) {
+            if (!primitive && o == null) return null;
             return DynamicSwitch.<Class>of(
                     Case(int.class, ((Number) o).intValue(),
                             byte.class, short.class, Integer.class, Byte.class, Short.class),
@@ -400,9 +403,9 @@ public class ConfigTypeSerializer {
                     Case(boolean.class, o, Boolean.class),
                     Case(char.class, o, Character.class)
             ).apply(type);
-        } else if (type == String.class) return o;
-        else if (type.isEnum()) return ((Enum<?>) o).name()
-                .toLowerCase(Locale.US).replace('-', '_');
+        }
+        if (type == String.class) return o;
+        if (type.isEnum()) return ((Enum<?>) o).name().toLowerCase(Locale.US).replace('-', '_');
         MapConfig config = new MapConfig();
         new ConfigTypeSerializer(config, this).saveObject(o, path);
         return config;

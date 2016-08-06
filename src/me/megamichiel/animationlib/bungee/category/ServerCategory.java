@@ -5,9 +5,17 @@ import me.megamichiel.animationlib.bungee.RegisteredPlaceholder;
 import net.md_5.bungee.BungeeCord;
 import net.md_5.bungee.api.config.ServerInfo;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class ServerCategory extends PlaceholderCategory {
 
     private static final long MB = 1024 * 1024;
+
+    private final Map<String, DateFormat> dateFormats = new ConcurrentHashMap<>();
 
     public ServerCategory() {
         super("server");
@@ -31,6 +39,20 @@ public class ServerCategory extends PlaceholderCategory {
             ServerInfo info = BungeeCord.getInstance().getServerInfo(server);
             if (info != null) return (n, p) -> Integer.toString(info.getPlayers().size());
             return (n, p) -> "<invalid_server>";
+        }
+        if (value.startsWith("date_")) {
+            String str = value.substring(5);
+            DateFormat df = dateFormats.get(str);
+            if (df == null) {
+                try {
+                    dateFormats.put(str, df = new SimpleDateFormat(str));
+                } catch (IllegalArgumentException ex) {
+                    AnimLibPlugin.inst().getLogger().warning("Invalid date format: " + str);
+                    return (n, p) -> "<invalid_date_format>";
+                }
+            }
+            DateFormat format = df;
+            return (n, p) -> format.format(new Date());
         }
         return null;
     }

@@ -1,9 +1,7 @@
 package me.megamichiel.animationlib.bungee;
 
 import me.megamichiel.animationlib.Nagger;
-import me.megamichiel.animationlib.bungee.category.PlaceholderCategory;
-import me.megamichiel.animationlib.bungee.category.PlayerCategory;
-import me.megamichiel.animationlib.bungee.category.ServerCategory;
+import me.megamichiel.animationlib.bungee.category.*;
 import me.megamichiel.animationlib.placeholder.IPlaceholder;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 
@@ -35,6 +33,8 @@ public class BungeePlaceholder implements IPlaceholder<String> {
     static {
         categories.add(new PlayerCategory());
         categories.add(new ServerCategory());
+        categories.add(new PingerCategory());
+        categories.add(new JavaScriptCategory());
     }
 
     public static void registerPlaceholder(String identifier,
@@ -51,7 +51,7 @@ public class BungeePlaceholder implements IPlaceholder<String> {
         int index = identifier.indexOf('_');
         if (index != -1) {
             String group    = identifier.substring(0, index),
-                    value   = identifier.substring(index + 1);
+                   value    = identifier.substring(index + 1);
             PlaceholderCategory category =
                     categories.stream().filter(c -> c.getCategory().equals(group))
                     .findAny().orElse(null);
@@ -61,5 +61,9 @@ public class BungeePlaceholder implements IPlaceholder<String> {
                 (placeholder = placeholders.get(identifier)) != null)
             return new BungeePlaceholder(placeholder);
         return (n, p) -> "<unknown_placeholder>";
+    }
+
+    public static void onEnable(AnimLibPlugin plugin) {
+        categories.forEach(c -> c.onEnable(plugin));
     }
 }

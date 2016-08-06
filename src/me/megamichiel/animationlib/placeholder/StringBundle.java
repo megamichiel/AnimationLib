@@ -2,7 +2,6 @@ package me.megamichiel.animationlib.placeholder;
 
 import com.google.common.base.Function;
 import me.megamichiel.animationlib.Nagger;
-import me.megamichiel.animationlib.bukkit.PapiPlaceholder;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -185,22 +184,22 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
      * @return this StringBundle instance
      */
     public StringBundle colorAmpersands() {
-        for (int i = 0, size = size(); i < size; i++) {
-            if (get(i) instanceof String) {
-                String str = (String) get(i);
-                char[] b = str.toCharArray();
+        for (int i = 0, size = size(); i < size; i++)
+            if (get(i) instanceof String)
+                set(i, colorAmpersands((String) get(i)));
+        return this;
+    }
 
-                for (int j = 0; j < b.length - 1; ++j) {
-                    if (b[j] == '&' && "0123456789AaBbCcDdEeFfKkLlMmNnOoRr".indexOf(b[j + 1]) > -1) {
-                        b[j] = 167;
-                        b[j + 1] = Character.toLowerCase(b[j + 1]);
-                    }
-                }
+    public static String colorAmpersands(String str) {
+        char[] b = str.toCharArray();
 
-                set(i, new String(b));
+        for (int j = 0; j < b.length - 1; ++j) {
+            if (b[j] == '&' && "0123456789AaBbCcDdEeFfKkLlMmNnOoRr".indexOf(b[j + 1]) > -1) {
+                b[j] = '\u00A7';
+                b[j + 1] = Character.toLowerCase(b[j + 1]);
             }
         }
-        return this;
+        return new String(b);
     }
 
     /**

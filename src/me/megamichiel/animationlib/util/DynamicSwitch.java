@@ -1,5 +1,6 @@
-package me.megamichiel.animationlib;
+package me.megamichiel.animationlib.util;
 
+import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -24,10 +25,9 @@ public class DynamicSwitch<T> implements Function<T, Object> {
             for (int i = 0; i < cases.length; i++)
                 if (cases[i].test(value)) {
                     for (; i < cases.length; i++) {
-                        Result result = cases[i].executor.execute();
+                        Result result = cases[i].executor.call();
                         if (result == Result.BREAK) return null;
-                        if (result != Result.FALL_THROUGH)
-                            return result.value;
+                        if (result != Result.FALL_THROUGH) return result.value;
                     }
                     return def.execute();
                 }
@@ -58,14 +58,12 @@ public class DynamicSwitch<T> implements Function<T, Object> {
 
     @SafeVarargs
     public static <T> Case<T> Case(T value, PredicateExecutor executor, T... extra) {
-        return new Case<>(value, () -> executor.execute()
-                ? Result.FALL_THROUGH : Result.BREAK, extra);
+        return new Case<>(value, () -> executor.execute() ? Result.FALL_THROUGH : Result.BREAK, extra);
     }
 
     @SafeVarargs
     public static <T> Case<T> Case(T value, boolean result, T... extra) {
-        return new Case<>(value, () -> result
-                ? Result.FALL_THROUGH : Result.BREAK, extra);
+        return new Case<>(value, () -> result ? Result.FALL_THROUGH : Result.BREAK, extra);
     }
 
     @SafeVarargs
@@ -81,10 +79,10 @@ public class DynamicSwitch<T> implements Function<T, Object> {
     public static class Case<T> {
 
         private final T value;
-        private final Executor executor;
+        private final Callable<Result> executor;
         private final T[] extra;
 
-        private Case(T value, Executor executor, T[] extra) {
+        private Case(T value, Callable<Result> executor, T[] extra) {
             this.value = value;
             this.executor = executor;
             this.extra = extra;
@@ -122,9 +120,5 @@ public class DynamicSwitch<T> implements Function<T, Object> {
 
     public interface PredicateExecutor {
         boolean execute() throws Exception;
-    }
-
-    private interface Executor {
-        Result execute() throws Exception;
     }
 }

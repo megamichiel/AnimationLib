@@ -42,17 +42,22 @@ public abstract class Animatable<E> extends ArrayList<E> {
 
     /**
      * Returns the value retrieved by {@link #get()}, and moves to the next frame
-     *
-     * @return the value retrieved by {@link #get()}
      */
     public E next() {
         E current = get();
-        if (size() <= 1) return current; // No need to animate
-        if (isRandom) {
-            for (int size = size(), prev = frame; frame == prev;) // no frames twice in a row ;3
-                frame = random.nextInt(size);
-        } else if (++frame == size()) frame = 0;
-        return current;
+        switch (size()) {
+            case 0: case 1: return current;
+            case 2:
+                frame = 1 - frame; // Ezpz 2 frames
+                return current;
+            default:
+                if (isRandom) {
+                    // No frames twice in a row ;3
+                    for (int size = size(), prev = frame; frame == prev;)
+                        frame = random.nextInt(size);
+                } else if (++frame == size()) frame = 0;
+                return current;
+        }
     }
 
     /**
