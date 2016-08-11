@@ -32,7 +32,12 @@ public class AnimatedEnum<E extends Enum<E>> extends Animatable<E> {
     public AnimatedEnum(Class<E> clazz) {
         this.clazz = clazz;
     }
-    
+
+    @Override
+    public AnimatedEnum<E> clone() {
+        return (AnimatedEnum<E>) super.clone();
+    }
+
     @Override
     protected E convert(Nagger nagger, Object str) {
         try {

@@ -177,6 +177,17 @@ public abstract class Animatable<E> extends ArrayList<E> {
         return section.getString(key);
     }
 
+    @Override
+    public Animatable<E> clone() {
+        return (Animatable<E>) super.clone();
+    }
+
+    public void copyTo(Animatable<E> other) {
+        other.addAll(this);
+        other.defaultValue = defaultValue;
+        other.isRandom = isRandom;
+    }
+
     public static <E, A extends Animatable<E>> A load(A animatable, Nagger nagger,
                                                       AbstractConfig section, String key, E def) {
         animatable.load(nagger, section, key, def);

@@ -22,7 +22,17 @@ public class AnimatedText extends Animatable<StringBundle> {
     public AnimatedText(StringBundle... elements) {
         super(elements);
     }
-    
+
+    @Override
+    public AnimatedText clone() {
+        AnimatedText txt = (AnimatedText) super.clone();
+        for (int i = txt.size(); i-- != 0;)
+            txt.set(i, txt.get(i).clone());
+        txt.defaultValue = defaultValue();
+        txt.isRandom = isRandom;
+        return txt;
+    }
+
     @Override
     protected StringBundle convert(Nagger nagger, Object str) {
         return StringBundle.parse(nagger, str.toString()).colorAmpersands();
