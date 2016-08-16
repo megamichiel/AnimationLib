@@ -48,10 +48,10 @@ public class PapiPlaceholder implements IPlaceholder<String> {
             name = identifier;
         }
     }
-    
+
     @Override
     public String toString() {
-        return "%" + plugin + "_" + name + "%";
+        return '%' + plugin + '_' + name + '%';
     }
     
     @Override

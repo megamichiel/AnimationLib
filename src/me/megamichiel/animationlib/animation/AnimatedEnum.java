@@ -16,7 +16,7 @@ public class AnimatedEnum<E extends Enum<E>> extends Animatable<E> {
      * Creates a new AnimatedEnum from <i>clazz</i>
      *
      * @param clazz the type to create an AnimatedEnum from
-     * @param <E> the type of <i>clazz</i>
+     * @param <E> the type newPipeline <i>clazz</i>
      * @return a newly creates AnimatedEnum
      */
     public static <E extends Enum<E>> AnimatedEnum<E> of(Class<E> clazz) {

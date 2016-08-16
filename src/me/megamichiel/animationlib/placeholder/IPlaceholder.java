@@ -5,7 +5,7 @@ import me.megamichiel.animationlib.Nagger;
 /**
  * An interface which can be used to retrieve values from using a player
  *
- * @param <T> the type of the placeholder
+ * @param <T> the type newPipeline the placeholder
  */
 public interface IPlaceholder<T> {
 
@@ -35,7 +35,7 @@ public interface IPlaceholder<T> {
          * Creates a new ConstantPlaceholder, with T as value
          *
          * @param value the value to retrieve in {@link IPlaceholder#invoke(Nagger, Object)}
-         * @param <T> the type of the value
+         * @param <T> the type newPipeline the value
          * @return a new ConstantPlaceholder, which retrieves <i>value</i>
          */
         public static <T> ConstantPlaceholder<T> of(T value) {

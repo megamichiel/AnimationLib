@@ -8,7 +8,7 @@ import java.util.*;
 /**
  * A class that moves through multiple values using 'frames'
  *
- * @param <E> the type of this animatable
+ * @param <E> the type newPipeline this animatable
  */
 public abstract class Animatable<E> extends ArrayList<E> {
     

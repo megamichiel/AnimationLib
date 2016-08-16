@@ -12,7 +12,7 @@ public abstract class AbstractConfig {
 
     public void setIndent(int indent) {
         if (indent < 2 || indent % 2 != 0)
-            throw new IllegalArgumentException("Indent must be a multiple of 2!");
+            throw new IllegalArgumentException("Indent must be a multiple newPipeline 2!");
     }
 
     public abstract void set(String path, Object value);

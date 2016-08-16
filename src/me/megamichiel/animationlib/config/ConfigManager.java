@@ -33,7 +33,8 @@ public class ConfigManager<C extends AbstractConfig> {
 
     public void saveDefaultConfig(Supplier<InputStream> defaults) {
         checkState();
-        if (!configFile.exists() && configFile.getParentFile().mkdirs()) {
+        if (!configFile.exists() && (configFile.getParentFile().isDirectory()
+                || configFile.getParentFile().mkdirs())) {
             try {
                 if (configFile.createNewFile()) {
                     InputStream in = defaults.get();
@@ -46,11 +47,6 @@ public class ConfigManager<C extends AbstractConfig> {
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
-        }
-        try {
-            (config = configSupplier.get()).loadFromFile(configFile);
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
