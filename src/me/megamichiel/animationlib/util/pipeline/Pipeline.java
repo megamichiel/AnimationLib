@@ -47,6 +47,14 @@ public class Pipeline<E> {
         forEach(e -> pipeline.accept(mapper.apply(e)));
         return pipeline;
     }
+
+    public <R> Pipeline<R> cast(Class<R> type) {
+        Pipeline<R> pipeline = new Pipeline<>(closer);
+        forEach(e -> {
+            if (type.isInstance(e)) pipeline.accept(type.cast(e));
+        });
+        return pipeline;
+    }
     
     public IntPipeline mapToInt(ToIntFunction<? super E> mapper) {
         IntPipeline pipeline = new IntPipeline(closer);
@@ -159,7 +167,7 @@ public class Pipeline<E> {
     public void forEach(Consumer<? super E> action) {
         values.add(e -> {
             action.accept(e);
-            return true;
+            return false;
         });
     }
 
@@ -169,6 +177,6 @@ public class Pipeline<E> {
     }
     
     public void unregister() {
-        closer.run();
+        if (closer != null) closer.run();
     }
 }

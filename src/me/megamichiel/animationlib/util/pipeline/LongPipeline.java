@@ -139,7 +139,7 @@ public class LongPipeline {
     public void forEach(LongConsumer action) {
         values.add(i -> {
             action.accept(i);
-            return true;
+            return false;
         });
     }
     

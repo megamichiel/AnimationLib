@@ -115,7 +115,7 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
     }
 
     /**
-     * Returns a String representation newPipeline this StringBundle,
+     * Returns a String representation of this StringBundle,
      * by invoking all placeholders in this StringBundle with the player,
      * and reporting errors to <i>nagger</i><br/>
      * 
@@ -178,7 +178,7 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
     }
 
     /**
-     * Colors all ampersands (&) in each String newPipeline this StringBundle<br/>
+     * Colors all ampersands (&) in each String of this StringBundle<br/>
      * 
      *
      * @return this StringBundle instance
@@ -207,19 +207,19 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
      * 
      *
      * @param player the player to invoke the placeholders with
-     * @return a String, containing the result newPipeline the placeholders
+     * @return a String, containing the result of the placeholders
      */
     public String toString(Object player) {
         return invoke(nagger, player);
     }
 
     /**
-     * Creates an array newPipeline StringBundles from an array newPipeline Strings<br/>
+     * Creates an array of StringBundles from an array of Strings<br/>
      * This method does not parse the strings, for that see {@link #parse(Nagger, String...)}<br/>
      * 
      *
      * @param nagger the Nagger to report errors to
-     * @param array the array newPipeline strings to transform
+     * @param array the array of strings to transform
      */
     public static StringBundle[] fromArray(Nagger nagger, String... array) {
         StringBundle[] bundles = new StringBundle[array.length];
@@ -229,11 +229,11 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
     }
 
     /**
-     * Parses an array newPipeline Strings into an array newPipeline StringBundles<br/>
+     * Parses an array of Strings into an array of StringBundles<br/>
      * 
      *
      * @param nagger the Nagger to report errors to
-     * @param array the array newPipeline Strings to parse
+     * @param array the array of Strings to parse
      * @return the newly created array, containing parsed Strings
      */
     public static StringBundle[] parse(Nagger nagger, String... array) {
@@ -289,7 +289,7 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
                 }
             } else {
                 switch(c) {
-                    case '%': //Start newPipeline placeholder
+                    case '%': //Start of placeholder
                         if (index + 1 < array.length && array[index + 1] == c) { // Double-character escape
                             index++;
                             builder.append(c);

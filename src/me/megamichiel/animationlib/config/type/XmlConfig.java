@@ -22,6 +22,8 @@ import java.util.function.Supplier;
 
 public class XmlConfig extends MapConfig {
 
+    private static final long serialVersionUID = 8119705465099280977L;
+
     private final Supplier<DocumentBuilderFactory> factory = LazyValue.of(DocumentBuilderFactory::newInstance);
     private final Supplier<Transformer> transformer = LazyValue.of(() -> {
         try {

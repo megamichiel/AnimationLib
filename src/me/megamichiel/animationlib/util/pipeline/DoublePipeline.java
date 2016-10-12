@@ -141,7 +141,7 @@ public class DoublePipeline {
     public void forEach(DoubleConsumer action) {
         values.add(d -> {
             action.accept(d);
-            return true;
+            return false;
         });
     }
 

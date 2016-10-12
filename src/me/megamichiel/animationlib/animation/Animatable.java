@@ -158,10 +158,10 @@ public abstract class Animatable<E> extends ArrayList<E> {
             for (int i = 1; i <= highest; i++) {
                 Object o = values.get(i);
                 if (o != null) last = o;
-                else if (last == null) {
+                else if (last == null)
                     System.out.println("No frame specified at " + i + " in " + key + "!");
-                }
-                add(convert(nagger, last));
+                E e = convert(nagger, last);
+                if (e != null) add(e);
             }
             return true;
         }

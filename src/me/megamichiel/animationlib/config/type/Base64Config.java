@@ -7,6 +7,8 @@ import java.util.Base64;
 
 public class Base64Config extends MapConfig {
 
+    private static final long serialVersionUID = -4455756488741974770L;
+
     @Override
     public String saveToString() {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();

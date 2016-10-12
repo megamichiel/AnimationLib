@@ -15,6 +15,22 @@ public abstract class AbstractConfig {
             throw new IllegalArgumentException("Indent must be a multiple newPipeline 2!");
     }
 
+    public abstract String getOriginalKey(String key);
+
+    public void restoreKeys(boolean deep) {
+        Set<String> keys = keys();
+        for (String key : keys) {
+            String s = getOriginalKey(key);
+            Object o = get(key);
+            if (!s.equals(key)) {
+                set(key, null);
+                set(s, o);
+            }
+            if (deep && o instanceof AbstractConfig)
+                ((AbstractConfig) o).restoreKeys(true);
+        }
+    }
+
     public abstract void set(String path, Object value);
 
     public abstract void setAll(AbstractConfig config);
@@ -48,6 +64,20 @@ public abstract class AbstractConfig {
     public boolean isString(String path) {
         Object o = get(path);
         return o instanceof String || isPrimitiveWrapper(o);
+    }
+
+    public <E extends Enum<E>> E getEnum(String path, Class<E> type, E def) {
+        String s = getString(path);
+        if (s == null) return def;
+        try {
+            return Enum.valueOf(type, s.toLowerCase(Locale.ENGLISH).replace('-', '_'));
+        } catch (IllegalArgumentException ex) {
+            return def;
+        }
+    }
+
+    public <E extends Enum<E>> E getEnum(String path, Class<E> type) {
+        return getEnum(path, type, null);
     }
 
     public int getInt(String path) {

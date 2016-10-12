@@ -9,6 +9,8 @@ import java.util.Map;
 
 public class YamlConfig extends MapConfig {
 
+    private static final long serialVersionUID = -3738784362967660224L;
+
     private final Representer     representer = new Representer();
     private final DumperOptions   options     = new DumperOptions();
     private final Yaml            yaml        = new Yaml(representer, options);

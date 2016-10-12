@@ -141,7 +141,7 @@ public class IntPipeline {
     public void forEach(IntConsumer action) {
         values.add(i -> {
             action.accept(i);
-            return true;
+            return false;
         });
     }
     

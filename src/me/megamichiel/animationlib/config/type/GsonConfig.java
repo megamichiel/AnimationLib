@@ -13,6 +13,8 @@ import java.util.function.Supplier;
 
 public class GsonConfig extends MapConfig {
 
+    private static final long serialVersionUID = 9171186229958126150L;
+
     private final Supplier<Gson> gson = LazyValue.of(() -> new GsonBuilder().setPrettyPrinting().create());
     private String indent = "    ";
 

@@ -1,6 +1,7 @@
 package me.megamichiel.animationlib.bungee;
 
 import me.megamichiel.animationlib.AnimLib;
+import me.megamichiel.animationlib.bukkit.BukkitCommandAPI;
 import me.megamichiel.animationlib.config.ConfigManager;
 import me.megamichiel.animationlib.config.type.YamlConfig;
 import me.megamichiel.animationlib.placeholder.StringBundle;
@@ -19,6 +20,8 @@ public class AnimLibPlugin extends Plugin implements AnimLib, LoggerNagger {
 
     private String booleanTrue, booleanFalse;
     private final long startTime = System.currentTimeMillis();
+
+    private final BungeeCommandAPI commandAPI = new BungeeCommandAPI();
 
     @Override
     public void onLoad() {
@@ -45,6 +48,10 @@ public class AnimLibPlugin extends Plugin implements AnimLib, LoggerNagger {
         YamlConfig cfg = config.getConfig();
         booleanTrue = colorAmpersands(cfg.getString("boolean.true", "yes"));
         booleanFalse = colorAmpersands(cfg.getString("boolean.false", "no"));
+    }
+
+    public BungeeCommandAPI getCommandAPI() {
+        return commandAPI;
     }
 
     public String booleanTrue() {

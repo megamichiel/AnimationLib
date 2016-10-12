@@ -33,4 +33,8 @@ public class LazyValue<T> implements Supplier<T> {
     public void reset() {
         value = null;
     }
+
+    public void set(T t) {
+        value = t;
+    }
 }

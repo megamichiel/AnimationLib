@@ -5,6 +5,7 @@ import me.clip.placeholderapi.PlaceholderAPIPlugin;
 import me.clip.placeholderapi.PlaceholderHook;
 import me.clip.placeholderapi.expansion.cloud.CloudExpansion;
 import me.clip.placeholderapi.expansion.cloud.ExpansionCloudManager;
+import me.megamichiel.animationlib.LazyValue;
 import me.megamichiel.animationlib.Nagger;
 import me.megamichiel.animationlib.placeholder.IPlaceholder;
 import org.bukkit.Bukkit;
@@ -15,8 +16,7 @@ import java.io.File;
 import java.util.Map.Entry;
 
 /**
- * An IPlaceholder&lt;String&gt; which utilises the plugin PlaceholderAPI
- *
+ * An IPlaceholder&lt;String&gt; which utilizes the plugin PlaceholderAPI
  */
 public class PapiPlaceholder implements IPlaceholder<String> {
     
@@ -87,21 +87,20 @@ public class PapiPlaceholder implements IPlaceholder<String> {
                     }.runTaskTimer(lib, 40L, 40L);
                 }
             }
-            if (handle == null && !downloading && !notified) {
+            if (!downloading && !notified) {
                 nagger.nag("Couldn't find placeholder by ID \"" + plugin + "\"!");
                 notified = true;
             }
         }
-        return "<unknown_placeholder>";
+        return downloading ? "<downloading>" : "<unknown_placeholder>";
     }
 
     private boolean getPlaceholder() {
-        for (Entry<String, PlaceholderHook> entry : PlaceholderAPI.getPlaceholders().entrySet()) {
+        for (Entry<String, PlaceholderHook> entry : PlaceholderAPI.getPlaceholders().entrySet())
             if (entry.getKey().equalsIgnoreCase(this.plugin)) {
                 handle = entry.getValue();
                 return true;
             }
-        }
         return false;
     }
 }

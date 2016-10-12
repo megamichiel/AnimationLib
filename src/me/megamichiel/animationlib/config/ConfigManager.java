@@ -53,7 +53,8 @@ public class ConfigManager<C extends AbstractConfig> {
     public void reloadConfig() {
         checkState();
         try {
-            (config = configSupplier.get()).loadFromFile(configFile);
+            if (configFile.exists())
+                (config = configSupplier.get()).loadFromFile(configFile);
         } catch (IOException e) {
             e.printStackTrace();
         }

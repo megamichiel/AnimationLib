@@ -26,26 +26,25 @@ public class PipelineListener<E extends Event> implements EventExecutor, Listene
     public static <E extends Event> Pipeline<E> newPipeline(Class<E> type,
                                                                     EventPriority priority,
                                                                     Plugin plugin) {
-        return new PipelineListener<>(type, priority, plugin).pipeline;
+        return new PipelineListener<>(type, priority, plugin).head;
     }
 
-    public static <E extends Event> Pipeline<E> newPipeline(Class<E> type,
-                                                                    Plugin plugin) {
+    public static <E extends Event> Pipeline<E> newPipeline(Class<E> type, Plugin plugin) {
         return newPipeline(type, EventPriority.NORMAL, plugin);
     }
 
     private final Class<E> type;
-    private final Pipeline<E> pipeline;
+    private final Pipeline<E> head;
     private boolean ignoreCancelled = false;
 
     private PipelineListener(Class<E> type, EventPriority priority, Plugin plugin) {
         HandlerList handlers = getHandlerList(type);
         if (handlers == null)
-            throw new IllegalArgumentException("Type has no getHandlerList() method!");
+            throw new IllegalArgumentException(type.getName() + " has no getHandlerList() method!");
         this.type = type;
         Handler handler = new Handler(priority, plugin);
         handlers.register(handler);
-        pipeline = new Pipeline<>(() -> handlers.unregister(handler));
+        head = new Pipeline<>(() -> handlers.unregister(handler));
     }
 
     public PipelineListener ignoreCancelled(boolean ignoreCancelled) {
@@ -64,7 +63,7 @@ public class PipelineListener<E extends Event> implements EventExecutor, Listene
     @Override
     public void execute(Listener listener, Event event) throws EventException {
         if (type.isInstance(event))
-            pipeline.accept(type.cast(event));
+            head.accept(type.cast(event));
     }
 
     private class Handler extends RegisteredListener {

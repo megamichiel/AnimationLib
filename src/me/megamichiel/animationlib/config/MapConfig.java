@@ -9,6 +9,7 @@ public class MapConfig extends AbstractConfig implements Serializable {
 
     private static final Function<String, String> TO_LOWER = s -> s.toLowerCase(Locale.US);
 
+    private final Map<String, String> mappedKeys = new HashMap<>();
     private final Map<String, Object> parent;
     private transient Function<String, String> keyMapper;
 
@@ -21,8 +22,20 @@ public class MapConfig extends AbstractConfig implements Serializable {
         parent = mapValues(map);
     }
 
+    @Override
+    public String getOriginalKey(String key) {
+        String s = mappedKeys.get(key);
+        return s == null ? key : s;
+    }
+
+    @Override
+    public void restoreKeys(boolean deep) {
+        keyMapper = Function.identity();
+        super.restoreKeys(deep);
+    }
+
     private Object mapValue(Object o) {
-        if (o instanceof Map) return new MapConfig(mapValues((Map) o));
+        if (o instanceof Map) return new MapConfig((Map) o);
         else if (o instanceof Iterable) return mapValues((Iterable) o);
         else if (o instanceof String) {
             String s = ((String) o).toLowerCase(Locale.US);
@@ -69,9 +82,12 @@ public class MapConfig extends AbstractConfig implements Serializable {
 
     private Map<String, Object> mapValues(Map<?, ?> map) {
         Map<String, Object> result = new LinkedHashMap<>();
-        for (Map.Entry<?, ?> entry : map.entrySet())
-            result.put(keyMapper.apply(entry.getKey().toString()),
-                    mapValue(entry.getValue()));
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            String key = entry.getKey().toString();
+            String mapped = keyMapper.apply(key);
+            mappedKeys.put(mapped, key);
+            result.put(mapped, mapValue(entry.getValue()));
+        }
         return result;
     }
 
@@ -101,22 +117,27 @@ public class MapConfig extends AbstractConfig implements Serializable {
         MapConfig target = this;
 
         for (int index; (index = path.indexOf('.')) != -1;) {
-            String key = target.keyMapper.apply(path.substring(0, index));
-            Object val = target.parent.get(key);
+            String key = path.substring(0, index),
+                   mapped = target.keyMapper.apply(key);
+            Object val = target.parent.get(mapped);
             if (val instanceof MapConfig) target = (MapConfig) val;
-            else target.parent.put(key, target = new MapConfig());
+            else {
+                target.parent.put(mapped, target = new MapConfig());
+                target.mappedKeys.put(mapped, key);
+            }
             path = path.substring(index + 1);
         }
-        path = target.keyMapper.apply(path);
-        if (value == null) target.parent.remove(path);
-        else target.parent.put(path, mapValue(value));
+        String key = target.keyMapper.apply(path);
+        mappedKeys.put(key, path);
+        if (value == null) {
+            target.parent.remove(key);
+            target.mappedKeys.remove(key);
+        } else target.parent.put(key, mapValue(value));
     }
 
     @Override
     public void setAll(AbstractConfig config) {
-        if (config instanceof MapConfig)
-            parent.putAll(((MapConfig) config).parent);
-        else parent.putAll(mapValues(config.toRawMap()));
+        parent.putAll(mapValues(config.toRawMap()));
     }
 
     @Override
@@ -140,7 +161,7 @@ public class MapConfig extends AbstractConfig implements Serializable {
 
     @Override
     public Set<String> keys() {
-        return parent.keySet();
+        return new HashSet<>(parent.keySet());
     }
 
     @Override
