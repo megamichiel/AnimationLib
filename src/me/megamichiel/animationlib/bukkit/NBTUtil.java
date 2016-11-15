@@ -14,7 +14,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-@SuppressWarnings("all")
+//@SuppressWarnings("all")
+@SuppressWarnings({"WeakerAccess", "unused"})
 public class NBTUtil {
 
     private static final NBTUtil instance = new NBTUtil();

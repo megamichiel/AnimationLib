@@ -16,14 +16,14 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
 
     private static final long serialVersionUID = 5196073861968616865L;
 
-    private static PlaceholderAdapter adapter;
+    private static Function<String, IPlaceholder<String>> adapter;
 
-    public static void setAdapter(PlaceholderAdapter adapter) {
+    public static void setAdapter(Function<String, IPlaceholder<String>> adapter) {
         if (StringBundle.adapter == null) StringBundle.adapter = adapter;
     }
 
     public static IPlaceholder<String> createPlaceholder(String identifier) {
-        return adapter.createPlaceholder(identifier);
+        return adapter.apply(identifier);
     }
 
     private final Nagger nagger;
@@ -191,15 +191,15 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
     }
 
     public static String colorAmpersands(String str) {
-        char[] b = str.toCharArray();
+        char[] chars = str.toCharArray();
 
-        for (int j = 0; j < b.length - 1; ++j) {
-            if (b[j] == '&' && "0123456789AaBbCcDdEeFfKkLlMmNnOoRr".indexOf(b[j + 1]) > -1) {
-                b[j] = '\u00A7';
-                b[j + 1] = Character.toLowerCase(b[j + 1]);
+        for (int pos = 0; pos < chars.length - 1; ++pos) {
+            if (chars[pos] == '&' && "0123456789AaBbCcDdEeFfKkLlMmNnOoRr".indexOf(chars[pos + 1]) > -1) {
+                chars[pos++] = '\u00A7';
+                chars[pos] = Character.toString(chars[pos]).toLowerCase(Locale.ENGLISH).charAt(0);
             }
         }
-        return new String(b);
+        return new String(chars);
     }
 
     /**
@@ -308,7 +308,7 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
                             break;
                         }
                         String identifier = builder.toString();
-                        IPlaceholder<String> placeholder = adapter.createPlaceholder(identifier);
+                        IPlaceholder<String> placeholder = adapter.apply(identifier);
                         bundle.add(new IdentifiedPlaceholder<>(identifier, placeholder));
                         builder = new StringBuilder();
                         break;
@@ -325,9 +325,5 @@ public class StringBundle extends ArrayList<Object> implements IPlaceholder<Stri
     @Override
     public StringBundle clone() {
         return new StringBundle(nagger, this);
-    }
-
-    public interface PlaceholderAdapter {
-        IPlaceholder<String> createPlaceholder(String identifier);
     }
 }

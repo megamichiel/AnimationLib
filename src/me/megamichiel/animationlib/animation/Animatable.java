@@ -53,8 +53,10 @@ public abstract class Animatable<E> extends ArrayList<E> {
             default:
                 if (isRandom) {
                     // No frames twice in a row ;3
-                    for (int size = size(), prev = frame; frame == prev;)
+                    int size = size(), prev = frame;
+                    do {
                         frame = random.nextInt(size);
+                    } while (frame == prev);
                 } else if (++frame == size()) frame = 0;
                 return current;
         }
