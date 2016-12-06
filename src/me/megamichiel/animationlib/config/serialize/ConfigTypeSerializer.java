@@ -159,7 +159,7 @@ public class ConfigTypeSerializer {
                             } catch (IllegalArgumentException ex) {
                                 throw new ConfigurationSerializationException(fPath,
                                         ConfigurationSerializationException.Type.INVALID_TYPE,
-                                        ex, "Not an enum value newPipeline " + type.getName() + ": " + string);
+                                        ex, "Not an enum value of " + type.getName() + ": " + string);
                             } catch (IllegalAccessException ex) {
                                 throw new ConfigurationSerializationException(fPath,
                                         ConfigurationSerializationException.Type.NO_FIELD_ACCESS,
@@ -254,7 +254,7 @@ public class ConfigTypeSerializer {
                     } catch (IllegalArgumentException ex) {
                         throw new ConfigurationSerializationException(path(path, index),
                                 ConfigurationSerializationException.Type.INVALID_TYPE,
-                                ex, "Not an enum value newPipeline " + type.getName() + ": " + string);
+                                ex, "Not an enum value of " + type.getName() + ": " + string);
                     }
                 };
             } else {

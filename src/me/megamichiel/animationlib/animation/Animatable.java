@@ -8,7 +8,7 @@ import java.util.*;
 /**
  * A class that moves through multiple values using 'frames'
  *
- * @param <E> the type newPipeline this animatable
+ * @param <E> the type of this animatable
  */
 public abstract class Animatable<E> extends ArrayList<E> {
     
@@ -107,6 +107,13 @@ public abstract class Animatable<E> extends ArrayList<E> {
     }
 
     /**
+     * Returns whether this Animatable's value is a section (can account for it)
+     */
+    protected boolean isSection() {
+        return false;
+    }
+
+    /**
      * Loads this Animatable from <i>section</i> with key <i>key</i>
      *
      * @param nagger the {@link Nagger} to report warnings to
@@ -122,6 +129,7 @@ public abstract class Animatable<E> extends ArrayList<E> {
             AbstractConfig sec = section.getSection(key);
             Map<Integer, Object> values = new HashMap<>();
             int highest = 1;
+            List<String> errors = new ArrayList<>();
             for (String id : sec.keys()) {
                 if ("random".equals(id)) {
                     isRandom = sec.getBoolean(id);
@@ -144,24 +152,32 @@ public abstract class Animatable<E> extends ArrayList<E> {
                                 int min = Integer.parseInt(item.substring(0, index)),
                                         max = Integer.parseInt(item.substring(index + 1));
                                 if (max < min) {
-                                    System.out.println("Max < Min at " + item + "!");
+                                    errors.add("Max < Min at " + item + "!");
                                     continue;
                                 }
                                 if (max > highest) highest = max;
                                 for (int i = min; i <= max; i++) values.put(i, value);
                             } catch (NumberFormatException ex2) {
-                                System.out.println("Invalid number: " + item + '!');
+                                errors.add("Invalid number: " + item + '!');
                             }
                         }
                     }
                 }
             }
+            if (values.isEmpty() && isSection()) {
+                Object value = getValue(nagger, section, key);
+                if (value != null) {
+                    add(convert(nagger, value));
+                    return true;
+                }
+            }
+            errors.forEach(nagger::nag);
             Object last = null;
             for (int i = 1; i <= highest; i++) {
                 Object o = values.get(i);
                 if (o != null) last = o;
                 else if (last == null)
-                    System.out.println("No frame specified at " + i + " in " + key + "!");
+                    nagger.nag("No frame specified at " + i + " in " + key + "!");
                 E e = convert(nagger, last);
                 if (e != null) add(e);
             }

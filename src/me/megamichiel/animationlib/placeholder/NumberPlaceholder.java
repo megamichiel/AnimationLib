@@ -32,27 +32,23 @@ public class NumberPlaceholder implements IPlaceholder<Integer> {
      * @throws IllegalArgumentException if the value is neither an integer nor a placeholder
      */
     public NumberPlaceholder(String string) throws IllegalArgumentException {
-        IPlaceholder<Integer> placeholder = null;
+        IPlaceholder<Integer> placeholder;
         try {
             int val = Integer.parseInt(string);
             placeholder = IPlaceholder.constant(val);
         } catch (NumberFormatException ex) {
-            if (string.startsWith("%") && string.endsWith("%")) {
-                IPlaceholder<String> ph = StringBundle.createPlaceholder(
-                        string.substring(1, string.length() - 1));
-                placeholder = (nagger, who) -> {
-                    String result = ph.invoke(nagger, who);
-                    try {
-                        return Integer.parseInt(result);
-                    } catch (NumberFormatException ex1) {
-                        nagger.nag("Placeholder " + ph.toString() + " didn't return a number! Got '" + result + "' instead");
-                        return 0;
-                    }
-                };
-            }
-            if (placeholder == null) {
-                throw new IllegalArgumentException(string);
-            }
+            StringBundle sb = StringBundle.parse(Nagger.ILLEGAL_ARGUMENT, string);
+            if (!sb.containsPlaceholders())
+                throw new IllegalArgumentException(string + " is not a number!");
+            placeholder = (CtxPlaceholder<Integer>) (nagger, who, ctx) -> {
+                String result = sb.invoke(nagger, who, ctx);
+                try {
+                    return Integer.valueOf(result);
+                } catch (NumberFormatException e) {
+                    nagger.nag("Expected number, got " + result);
+                    return 0;
+                }
+            };
         }
         handle = placeholder;
     }
@@ -60,5 +56,10 @@ public class NumberPlaceholder implements IPlaceholder<Integer> {
     @Override
     public Integer invoke(Nagger nagger, Object who) {
         return handle.invoke(nagger, who);
+    }
+
+    @Override
+    public Integer invoke(Nagger nagger, Object who, PlaceholderContext ctx) {
+        return handle.invoke(nagger, who, ctx);
     }
 }

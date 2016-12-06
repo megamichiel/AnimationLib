@@ -17,15 +17,17 @@ public class PipelineListener<E extends Event> implements EventExecutor, Listene
             return (HandlerList) m.invoke(null);
         } catch (Exception ex) {
             Class<?> parent = c.getSuperclass();
-            if (Event.class.isAssignableFrom(parent))
+            try {
                 return getHandlerList(parent.asSubclass(Event.class));
-            return null;
+            } catch (ClassCastException ex2) {
+                return null;
+            }
         }
     }
 
     public static <E extends Event> Pipeline<E> newPipeline(Class<E> type,
-                                                                    EventPriority priority,
-                                                                    Plugin plugin) {
+                                                            EventPriority priority,
+                                                            Plugin plugin) {
         return new PipelineListener<>(type, priority, plugin).head;
     }
 
@@ -35,7 +37,6 @@ public class PipelineListener<E extends Event> implements EventExecutor, Listene
 
     private final Class<E> type;
     private final Pipeline<E> head;
-    private boolean ignoreCancelled = false;
 
     private PipelineListener(Class<E> type, EventPriority priority, Plugin plugin) {
         HandlerList handlers = getHandlerList(type);
@@ -47,35 +48,15 @@ public class PipelineListener<E extends Event> implements EventExecutor, Listene
         head = new Pipeline<>(() -> handlers.unregister(handler));
     }
 
-    public PipelineListener ignoreCancelled(boolean ignoreCancelled) {
-        this.ignoreCancelled = ignoreCancelled;
-        return this;
-    }
-
-    public PipelineListener ignoreCancelled() {
-        return ignoreCancelled(true);
-    }
-
-    public boolean isIgnoringCancelled() {
-        return ignoreCancelled;
-    }
-
     @Override
     public void execute(Listener listener, Event event) throws EventException {
-        if (type.isInstance(event))
-            head.accept(type.cast(event));
+        if (type.isInstance(event)) head.accept(type.cast(event));
     }
 
     private class Handler extends RegisteredListener {
 
         private Handler(EventPriority priority, Plugin plugin) {
-            super(PipelineListener.this, PipelineListener.this,
-                    priority, plugin, false);
-        }
-
-        @Override
-        public boolean isIgnoringCancelled() {
-            return ignoreCancelled;
+            super(PipelineListener.this, PipelineListener.this, priority, plugin, false);
         }
     }
 }

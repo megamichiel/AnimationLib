@@ -6,6 +6,10 @@ import java.util.logging.Logger;
 
 public interface LoggerNagger extends Nagger {
 
+    static LoggerNagger of(Logger logger) {
+        return () -> logger;
+    }
+
     Logger getLogger();
 
     @Override

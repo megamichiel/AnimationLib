@@ -1,8 +1,8 @@
-package me.megamichiel.animationlib.bukkit;
+package me.megamichiel.animationlib.bukkit.nbt;
 
 import java.util.Map;
 
-public class NBTTag {
+public class NBTTag implements Cloneable {
 
     private final NBTUtil util;
     private final Object handle;
@@ -20,9 +20,44 @@ public class NBTTag {
         map = util.getMap(handle);
     }
 
+    public void setRaw(String key, Object value) {
+        if (value == null) map.remove(key);
+        else map.put(key, value);
+    }
+
     public void set(String key, Object value) {
         if (value == null) map.remove(key);
         else map.put(key, util.wrap(value));
+    }
+
+    public void remove(String key) {
+        map.remove(key);
+    }
+
+    public NBTTag createTag(String key) {
+        NBTTag tag = new NBTTag();
+        map.put(key, tag.getHandle());
+        return tag;
+    }
+
+    public NBTTag getOrCreateTag(String key) {
+        NBTTag tag = getTag(key);
+        return tag == null ? createTag(key) : tag;
+    }
+
+    public NBTList createList(String key) {
+        NBTList list = new NBTList();
+        map.put(key, list.getHandle());
+        return list;
+    }
+
+    public NBTList getOrCreateList(String key) {
+        NBTList list = getList(key);
+        return list == null ? createList(key) : list;
+    }
+
+    public boolean contains(String name) {
+        return map.containsKey(name);
     }
 
     public Object get(String key) {
@@ -136,6 +171,15 @@ public class NBTTag {
 
     public Object getHandle() {
         return handle;
+    }
+
+    @Override
+    public NBTTag clone() {
+        try {
+            return (NBTTag) super.clone();
+        } catch (CloneNotSupportedException ex) {
+            return null;
+        }
     }
 
     private static boolean isPrimitive(Object o) {

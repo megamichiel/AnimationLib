@@ -8,6 +8,7 @@ import me.clip.placeholderapi.expansion.cloud.ExpansionCloudManager;
 import me.megamichiel.animationlib.LazyValue;
 import me.megamichiel.animationlib.Nagger;
 import me.megamichiel.animationlib.placeholder.IPlaceholder;
+import me.megamichiel.animationlib.placeholder.PlaceholderContext;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -20,7 +21,7 @@ import java.util.Map.Entry;
  */
 public class PapiPlaceholder implements IPlaceholder<String> {
     
-    private static final boolean placeHolder;
+    public static final boolean apiAvailable;
     
     static {
         boolean flag = false;
@@ -30,16 +31,15 @@ public class PapiPlaceholder implements IPlaceholder<String> {
         } catch (Exception ex) {
             // No PlaceholderAPI ;c
         }
-        placeHolder = flag;
+        apiAvailable = flag;
     }
     
-    private final String plugin;
-    private final String name;
+    private final String plugin, name, identifier;
     private PlaceholderHook handle;
     private boolean notified = false, downloading = false;
     
     public PapiPlaceholder(String identifier) {
-        int index = identifier.indexOf('_');
+        int index = (this.identifier = identifier).indexOf('_');
         if (index > 0) {
             plugin = identifier.substring(0, index);
             name = identifier.substring(index + 1);
@@ -53,10 +53,17 @@ public class PapiPlaceholder implements IPlaceholder<String> {
     public String toString() {
         return '%' + plugin + '_' + name + '%';
     }
-    
+
+    @Override
+    public String invoke(Nagger nagger, Object who, PlaceholderContext ctx) {
+        String str = invoke(nagger, who);
+        if (ctx != null) ctx.set(who, identifier, str);
+        return str;
+    }
+
     @Override
     public String invoke(Nagger nagger, Object who) {
-        if (!placeHolder) return toString();
+        if (!apiAvailable) return toString();
         if (handle != null || getPlaceholder()) {
             String str = handle.onPlaceholderRequest((Player) who, name);
             return str != null ? str : "<invalid_argument>";
@@ -97,7 +104,7 @@ public class PapiPlaceholder implements IPlaceholder<String> {
 
     private boolean getPlaceholder() {
         for (Entry<String, PlaceholderHook> entry : PlaceholderAPI.getPlaceholders().entrySet())
-            if (entry.getKey().equalsIgnoreCase(this.plugin)) {
+            if (entry.getKey().equalsIgnoreCase(plugin)) {
                 handle = entry.getValue();
                 return true;
             }

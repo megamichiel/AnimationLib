@@ -3,6 +3,7 @@ package me.megamichiel.animationlib.bungee;
 import me.megamichiel.animationlib.Nagger;
 import me.megamichiel.animationlib.bungee.category.*;
 import me.megamichiel.animationlib.placeholder.IPlaceholder;
+import me.megamichiel.animationlib.placeholder.PlaceholderContext;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 
 import java.util.ArrayList;
@@ -12,13 +13,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class BungeePlaceholder implements IPlaceholder<String> {
 
+    private final String identifier;
     private final RegisteredPlaceholder placeholder;
 
     public BungeePlaceholder(String identifier) {
-        this.placeholder = placeholders.get(identifier);
+        this(identifier, placeholders.get(identifier));
     }
 
-    public BungeePlaceholder(RegisteredPlaceholder placeholder) {
+    public BungeePlaceholder(String identifier, RegisteredPlaceholder placeholder) {
+        this.identifier = identifier;
         this.placeholder = placeholder;
     }
 
@@ -27,12 +30,17 @@ public class BungeePlaceholder implements IPlaceholder<String> {
         return placeholder.invoke(nagger, (ProxiedPlayer) who);
     }
 
+    @Override
+    public String invoke(Nagger nagger, Object who, PlaceholderContext ctx) {
+        String str = placeholder.invoke(nagger, (ProxiedPlayer) who);
+        if (ctx != null) ctx.set(who, identifier, str);
+        return str;
+    }
+
     private static final List<PlaceholderCategory> categories = new ArrayList<>();
     private static final Map<String, RegisteredPlaceholder> placeholders = new ConcurrentHashMap<>();
 
     static {
-        categories.add(new PlayerCategory());
-        categories.add(new ServerCategory());
         categories.add(new PingerCategory());
         categories.add(new JavaScriptCategory());
     }
@@ -57,13 +65,17 @@ public class BungeePlaceholder implements IPlaceholder<String> {
                     .findAny().orElse(null);
             if (category != null) placeholder = category.get(value);
         }
-        if (placeholder != null ||
-                (placeholder = placeholders.get(identifier)) != null)
-            return new BungeePlaceholder(placeholder);
+        if (placeholder != null || (placeholder = placeholders.get(identifier)) != null)
+            return new BungeePlaceholder(identifier, placeholder);
         return (n, p) -> "<unknown_placeholder>";
     }
 
-    public static void onEnable(AnimLibPlugin plugin) {
+    static void onLoad(AnimLibPlugin plugin) {
+        categories.add(new PlayerCategory(plugin));
+        categories.add(new ServerCategory(plugin));
+    }
+
+    static void onEnable(AnimLibPlugin plugin) {
         categories.forEach(c -> c.onEnable(plugin));
     }
 }

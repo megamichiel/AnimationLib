@@ -15,13 +15,15 @@ public class ServerCategory extends PlaceholderCategory {
 
     private static final long MB = 1024 * 1024;
 
+    private final AnimLibPlugin plugin;
     private final Map<String, DateFormat> dateFormats = new ConcurrentHashMap<>();
 
-    public ServerCategory() {
+    public ServerCategory(AnimLibPlugin plugin) {
         super("server");
+        this.plugin = plugin;
 
         put("online",    (n, p) -> Integer.toString(getServer().getOnlineCount()));
-        put("uptime",    (n, p) -> AnimLibPlugin.inst().uptime());
+        put("uptime",    (n, p) -> plugin.uptime());
 
         Runtime runtime = Runtime.getRuntime();
         put("ram_used",  (n, p) -> Long.toString((runtime.totalMemory() - runtime.freeMemory()) / MB));
@@ -47,7 +49,7 @@ public class ServerCategory extends PlaceholderCategory {
                 try {
                     dateFormats.put(str, df = new SimpleDateFormat(str));
                 } catch (IllegalArgumentException ex) {
-                    AnimLibPlugin.inst().getLogger().warning("Invalid date format: " + str);
+                    plugin.nag("Invalid date format: " + str);
                     return (n, p) -> "<invalid_date_format>";
                 }
             }

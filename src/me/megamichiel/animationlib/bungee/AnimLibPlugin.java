@@ -1,31 +1,36 @@
 package me.megamichiel.animationlib.bungee;
 
 import me.megamichiel.animationlib.AnimLib;
-import me.megamichiel.animationlib.bukkit.BukkitCommandAPI;
+import me.megamichiel.animationlib.config.AbstractConfig;
 import me.megamichiel.animationlib.config.ConfigManager;
 import me.megamichiel.animationlib.config.type.YamlConfig;
 import me.megamichiel.animationlib.placeholder.StringBundle;
+import me.megamichiel.animationlib.placeholder.Formula;
 import me.megamichiel.animationlib.util.LoggerNagger;
 import net.md_5.bungee.api.plugin.Plugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static me.megamichiel.animationlib.placeholder.StringBundle.colorAmpersands;
 
 public class AnimLibPlugin extends Plugin implements AnimLib, LoggerNagger {
 
-    private static AnimLibPlugin instance;
-
     private String booleanTrue, booleanFalse;
     private final long startTime = System.currentTimeMillis();
 
     private final BungeeCommandAPI commandAPI = new BungeeCommandAPI();
 
+    private final Map<String, RegisteredPlaceholder> formulas = new HashMap<>();
+
     @Override
     public void onLoad() {
-        instance = this;
+        BungeePlaceholder.onLoad(this);
         StringBundle.setAdapter(BungeePlaceholder::resolve);
     }
 
@@ -48,6 +53,40 @@ public class AnimLibPlugin extends Plugin implements AnimLib, LoggerNagger {
         YamlConfig cfg = config.getConfig();
         booleanTrue = colorAmpersands(cfg.getString("boolean.true", "yes"));
         booleanFalse = colorAmpersands(cfg.getString("boolean.false", "no"));
+
+        formulas.clear();
+        String locale = cfg.getString("formula-locale");
+        if (locale != null) Formula.setLocale(new Locale(locale));
+        if (cfg.isSection("formulas")) {
+            AbstractConfig section = cfg.getSection("formulas");
+            for (String key : section.keys()) {
+                String val = section.getString(key);
+                String origin = section.getOriginalKey(key);
+                Formula formula;
+                if (val != null) {
+                    formula = Formula.parse(val, null);
+                    if (formula == null) continue;
+                    formulas.put(origin, formula::invoke);
+                } else {
+                    AbstractConfig sec = section.getSection(key);
+                    if (sec != null) {
+                        String value = sec.getString("value"),
+                                format = sec.getString("format");
+                        if (value == null) continue;
+                        DecimalFormat nf;
+                        try {
+                            nf = new DecimalFormat(format, Formula.getSymbols());
+                        } catch (IllegalArgumentException ex) {
+                            nag("Invalid formula format: " + format);
+                            continue;
+                        }
+                        if ((formula = Formula.parse(value, nf)) == null)
+                            continue;
+                        formulas.put(origin, formula::invoke);
+                    }
+                }
+            }
+        }
     }
 
     public BungeeCommandAPI getCommandAPI() {
@@ -66,8 +105,8 @@ public class AnimLibPlugin extends Plugin implements AnimLib, LoggerNagger {
         return getTime((int) TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - startTime));
     }
 
-    public static AnimLibPlugin inst() {
-        return instance;
+    public RegisteredPlaceholder getFormula(String id) {
+        return formulas.get(id);
     }
 
     public static String getTime(int seconds) {

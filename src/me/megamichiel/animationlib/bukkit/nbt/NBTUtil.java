@@ -1,4 +1,4 @@
-package me.megamichiel.animationlib.bukkit;
+package me.megamichiel.animationlib.bukkit.nbt;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -6,16 +6,12 @@ import org.bukkit.inventory.ItemStack;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-//@SuppressWarnings("all")
-@SuppressWarnings({"WeakerAccess", "unused"})
+@SuppressWarnings({"WeakerAccess", "unused", "unchecked"})
 public class NBTUtil {
 
     private static final NBTUtil instance = new NBTUtil();
@@ -188,7 +184,7 @@ public class NBTUtil {
         Class<?> data = type;
         String id;
         BiConsumer<Object, Object> converter = null;
-        Function<Object, T> unwrapper = type::cast;
+        Function<Object, Object> unwrapper = type::cast;
         if (data.isPrimitive()) data = primitiveBoxes.get(type);
         if (data == byte[].class) id = "ByteArray";
         else if (data == int[].class) id = "IntArray";
@@ -209,22 +205,29 @@ public class NBTUtil {
             id = "Compound";
             data = Map.class;
             converter = (tag, value) -> {
-                Map<String, Object> map = getMap(tag);
-                for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet())
-                    map.put(entry.getKey().toString(), wrap(entry.getValue()));
+                try {
+                    ((Map) mapField.get(tag)).putAll((Map) value);
+                } catch (IllegalAccessException ex) {
+                    throw new IllegalStateException(ex);
+                }
             };
+            unwrapper = Function.identity();
         } else if (Iterable.class.isAssignableFrom(data)) {
             id = "List";
             data = List.class;
             converter = (tag, value) -> {
                 try {
-                    List<Object> list = (List<Object>) listField.get(tag);
-                    for (Object o : ((Iterable<?>) value))
-                        list.add(wrap(o));
+                    if (value instanceof Collection)
+                        ((List) listField.get(tag)).addAll((Collection) value);
+                    else {
+                        List list = (List) listField.get(tag);
+                        ((Iterable) value).forEach(list::add);
+                    }
                 } catch (IllegalAccessException ex) {
                     throw new IllegalStateException(ex);
                 }
             };
+            unwrapper = Function.identity();
         } else id = data.getSimpleName();
         try {
             Modifier<T> res = new Modifier<>(
@@ -245,10 +248,10 @@ public class NBTUtil {
         final Constructor<?> wrapper;
         final Field data;
         final BiConsumer<Object, Object> converter;
-        final Function<Object, T> unwrapper;
+        final Function<Object, Object> unwrapper;
 
         Modifier(Class<?> nms, Class<?> type, BiConsumer<Object, Object> converter,
-                 Function<Object, T> unwrapper) throws NoSuchElementException {
+                 Function<Object, Object> unwrapper) throws NoSuchElementException {
             Class<?> search = type;
             try {
                 if (type.getPackage().getName().equals("java.lang"))
@@ -291,9 +294,17 @@ public class NBTUtil {
 
         public T unwrap(Object value) throws IllegalStateException {
             try {
-                return unwrapper.apply(data.get(value));
+                return (T) unwrapper.apply(data.get(value));
             } catch (IllegalAccessException ex) {
                 throw new IllegalStateException(ex);
+            }
+        }
+
+        public boolean isInstance(Object value) {
+            try {
+                return wrapper.getDeclaringClass().isInstance(value);
+            } catch (Exception ex) {
+                return false;
             }
         }
     }

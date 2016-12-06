@@ -1,4 +1,4 @@
-package me.megamichiel.animationlib.bukkit;
+package me.megamichiel.animationlib.bukkit.nbt;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +20,22 @@ public class NBTList {
         list = (util = NBTUtil.getInstance()).modifier(List.class).unwrap(this.handle = handle);
     }
 
+    public int size() {
+        return list.size();
+    }
+
+    public boolean isEmpty() {
+        return list.isEmpty();
+    }
+
+    public void clear() {
+        list.clear();
+    }
+
+    public void remove(int index) {
+        list.remove(index);
+    }
+
     public void set(int index, Object value) {
         if (value == null) list.remove(index);
         else list.set(index, util.wrap(value));
@@ -27,6 +43,10 @@ public class NBTList {
 
     public void add(Object value) {
         list.add(util.wrap(value));
+    }
+
+    public void addRaw(Object value) {
+        list.add(value);
     }
 
     public Object get(int index) {
@@ -83,22 +103,26 @@ public class NBTList {
     
     public NBTTag getTag(int index) {
         try {
-            return new NBTTag(get(index));
+            return new NBTTag(list.get(index));
         } catch (IllegalStateException ex) {
-            throw new ClassCastException();
+            return null;
         }
     }
 
     public NBTList getList(int index) {
         try {
-            return new NBTList(get(index));
+            return new NBTList(list.get(index));
         } catch (IllegalStateException ex) {
-            throw new ClassCastException();
+            return null;
         }
     }
 
     public Object getHandle() {
         return handle;
+    }
+
+    public List<Object> getList() {
+        return list;
     }
 
     private static boolean isPrimitive(Object o) {

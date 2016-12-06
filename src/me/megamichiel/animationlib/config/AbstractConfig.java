@@ -12,7 +12,7 @@ public abstract class AbstractConfig {
 
     public void setIndent(int indent) {
         if (indent < 2 || indent % 2 != 0)
-            throw new IllegalArgumentException("Indent must be a multiple newPipeline 2!");
+            throw new IllegalArgumentException("Indent must be a multiple of 2!");
     }
 
     public abstract String getOriginalKey(String key);
@@ -145,7 +145,7 @@ public abstract class AbstractConfig {
         return getList(path, o -> o instanceof String || isPrimitiveWrapper(o) ? o.toString() : null);
     }
 
-    public List<? extends AbstractConfig> getSectionList(String path) {
+    public List<AbstractConfig> getSectionList(String path) {
         return getList(path, o -> o instanceof AbstractConfig ? (AbstractConfig) o : null);
     }
 
@@ -177,8 +177,8 @@ public abstract class AbstractConfig {
         new ConfigTypeSerializer(this).saveObject(o);
     }
 
-    private static boolean isPrimitiveWrapper(Object o) {
-        return o instanceof Number || o instanceof Boolean;
+    public static boolean isPrimitiveWrapper(Object o) {
+        return o instanceof Number || o instanceof Boolean || o instanceof Character;
     }
 
     public static <I, O> Function<I, O> silentCast(Class<O> target) {

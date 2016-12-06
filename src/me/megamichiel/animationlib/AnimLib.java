@@ -9,10 +9,10 @@ import java.net.URL;
 public interface AnimLib {
 
     /**
-     * Retrieves the current version newPipeline a resource on spigotmc.org<br/>
+     * Retrieves the current version of a resource on spigotmc.org<br/>
      * <i>Since: 1.1.0</i>
      *
-     * @param resource the id newPipeline the resource
+     * @param resource the id of the resource
      * @return the latest version
      * @throws IOException if it can't connect
      */

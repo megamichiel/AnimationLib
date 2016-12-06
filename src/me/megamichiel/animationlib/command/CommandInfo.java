@@ -44,7 +44,7 @@ public class CommandInfo {
         return aliases;
     }
 
-    public CommandInfo aliases(String[] aliases) {
+    public CommandInfo aliases(String... aliases) {
         this.aliases = aliases == null ? EMPTY_ARRAY : aliases;
         return this;
     }

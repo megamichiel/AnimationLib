@@ -5,8 +5,11 @@ import me.megamichiel.animationlib.bungee.RegisteredPlaceholder;
 
 public class PlayerCategory extends PlaceholderCategory {
 
-    public PlayerCategory() {
+    private final AnimLibPlugin plugin;
+
+    public PlayerCategory(AnimLibPlugin plugin) {
         super("player");
+        this.plugin = plugin;
 
         put("name",         (n, p) -> p.getName());
         put("server",       (n, p) -> p.getServer().getInfo().getName());
@@ -39,8 +42,7 @@ public class PlayerCategory extends PlaceholderCategory {
         return null;
     }
 
-    public static String bool(boolean flag) {
-        AnimLibPlugin plugin = AnimLibPlugin.inst();
+    private String bool(boolean flag) {
         return flag ? plugin.booleanTrue() : plugin.booleanFalse();
     }
 }
