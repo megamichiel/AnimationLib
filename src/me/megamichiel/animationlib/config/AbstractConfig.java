@@ -6,6 +6,8 @@ import me.megamichiel.animationlib.config.serialize.ConfigurationSerializationEx
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public abstract class AbstractConfig {
@@ -162,6 +164,14 @@ public abstract class AbstractConfig {
     public abstract AbstractConfig loadFromFile(File file) throws IOException;
 
     public abstract void save(File file) throws IOException;
+
+    public void forEach(BiConsumer<String, Object> action) {
+        values().forEach(action);
+    }
+
+    public void forEachKey(Consumer<String> action) {
+        keys().forEach(action);
+    }
 
     public <T> T loadAsClass(Class<T> clazz) throws ConfigurationSerializationException {
         return new ConfigTypeSerializer(this).loadAsClass(clazz);

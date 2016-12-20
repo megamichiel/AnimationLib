@@ -12,6 +12,7 @@ import net.md_5.bungee.api.plugin.Plugin;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -59,33 +60,36 @@ public class AnimLibPlugin extends Plugin implements AnimLib, LoggerNagger {
         if (locale != null) Formula.setLocale(new Locale(locale));
         if (cfg.isSection("formulas")) {
             AbstractConfig section = cfg.getSection("formulas");
-            for (String key : section.keys()) {
-                String val = section.getString(key);
-                String origin = section.getOriginalKey(key);
+            section.forEach((key, value) -> {
                 Formula formula;
-                if (val != null) {
-                    formula = Formula.parse(val, null);
-                    if (formula == null) continue;
-                    formulas.put(origin, formula::invoke);
-                } else {
-                    AbstractConfig sec = section.getSection(key);
-                    if (sec != null) {
-                        String value = sec.getString("value"),
-                                format = sec.getString("format");
-                        if (value == null) continue;
-                        DecimalFormat nf;
-                        try {
-                            nf = new DecimalFormat(format, Formula.getSymbols());
-                        } catch (IllegalArgumentException ex) {
-                            nag("Invalid formula format: " + format);
-                            continue;
-                        }
-                        if ((formula = Formula.parse(value, nf)) == null)
-                            continue;
-                        formulas.put(origin, formula::invoke);
+                if (value instanceof AbstractConfig) {
+                    AbstractConfig sec = (AbstractConfig) value;
+                    String val = sec.getString("value"),
+                            format = sec.getString("format");
+                    if (val == null) return;
+                    DecimalFormat nf;
+                    try {
+                        nf = new DecimalFormat(format, Formula.getSymbols());
+                    } catch (IllegalArgumentException ex) {
+                        nag("Invalid formula format: " + format);
+                        return;
                     }
-                }
-            }
+                    try {
+                        formula = Formula.parse(val, nf);
+                    } catch (IllegalArgumentException ex) {
+                        nag("Failed to parse formula " + val + ": " + ex.getMessage());
+                        return;
+                    }
+                } else if (!(value instanceof Collection)) {
+                    try {
+                        formula = Formula.parse(value.toString(), null);
+                    } catch (IllegalArgumentException ex) {
+                        nag("Failed to parse formula " + value + ": " + ex.getMessage());
+                        return;
+                    }
+                } else return;
+                formulas.put(section.getOriginalKey(key), formula::invoke);
+            });
         }
     }
 
