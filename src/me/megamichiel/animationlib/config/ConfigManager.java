@@ -13,8 +13,9 @@ public class ConfigManager<C extends AbstractConfig> {
         return new ConfigManager<>(configSupplier).file(file).getConfig();
     }
 
-    private File configFile;
     private final Supplier<C> configSupplier;
+
+    private File configFile;
     private C config;
 
     public ConfigManager(Supplier<C> configSupplier) {
@@ -35,17 +36,29 @@ public class ConfigManager<C extends AbstractConfig> {
         checkState();
         if (!configFile.exists() && (configFile.getParentFile().isDirectory()
                 || configFile.getParentFile().mkdirs())) {
+            InputStream in = null;
+            OutputStream out = null;
             try {
                 if (configFile.createNewFile()) {
-                    InputStream in = defaults.get();
-                    OutputStream out = new FileOutputStream(configFile);
-                    for (int read; (read = in.read()) != -1;)
-                        out.write(read);
-                    in.close();
-                    out.close();
+                    in = defaults.get();
+                    out = new FileOutputStream(configFile);
+                    byte[] buf = new byte[4096];
+                    for (int read; (read = in.read(buf, 0, 4096)) != -1;)
+                        out.write(buf, 0, read);
                 }
             } catch (IOException ex) {
                 ex.printStackTrace();
+            } finally {
+                if (in != null) try {
+                    in.close();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+                if (out != null) try {
+                    out.close();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
             }
         }
     }
@@ -69,7 +82,7 @@ public class ConfigManager<C extends AbstractConfig> {
         checkState();
         try {
             getConfig().save(configFile);
-        } catch (Exception e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }

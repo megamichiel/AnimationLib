@@ -1,41 +1,16 @@
 package me.megamichiel.animationlib.placeholder;
 
 import me.megamichiel.animationlib.Nagger;
+import me.megamichiel.animationlib.placeholder.ctx.SimplePlaceholderContext;
 
-import java.util.HashMap;
-import java.util.Map;
+public interface PlaceholderContext {
 
-public final class PlaceholderContext {
+    Object get(Object who, String identifier);
 
-    private final Map<Object, Map<String, Object>> values = new HashMap<>();
+    @SuppressWarnings("unchecked")
+    <T> T invoke(Object who, String identifier, IPlaceholder<T> placeholder);
 
-    private final Nagger nagger;
-
-    private PlaceholderContext(Nagger nagger) {
-        this.nagger = nagger;
-    }
-
-    public Object get(Object who, String identifier) {
-        Map<String, Object> map = values.get(who);
-        return map != null ? map.get(identifier) : null;
-    }
-
-    public void set(Object who, String identifier, Object value) {
-        Map<String, Object> map = values.get(who);
-        if (map == null) values.put(who, map = new HashMap<>());
-        map.put(identifier, value);
-    }
-
-    public <T> T invoke(Object who, String identifier, IPlaceholder<T> placeholder) {
-        Map<String, Object> map = values.get(who);
-        T result = null;
-        if (map == null) values.put(who, map = new HashMap<>());
-        else if ((result = (T) map.get(identifier)) != null) return result;
-        map.put(identifier, result = placeholder.invoke(nagger, who));
-        return result;
-    }
-
-    public static PlaceholderContext create(Nagger nagger) {
-        return new PlaceholderContext(nagger);
+    static PlaceholderContext create(Nagger nagger) {
+        return new SimplePlaceholderContext(nagger);
     }
 }

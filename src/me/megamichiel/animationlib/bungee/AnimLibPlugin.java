@@ -7,6 +7,9 @@ import me.megamichiel.animationlib.config.type.YamlConfig;
 import me.megamichiel.animationlib.placeholder.StringBundle;
 import me.megamichiel.animationlib.placeholder.Formula;
 import me.megamichiel.animationlib.util.LoggerNagger;
+import me.megamichiel.animationlib.util.db.DataBase;
+import me.megamichiel.animationlib.util.pipeline.Pipeline;
+import net.md_5.bungee.api.plugin.Event;
 import net.md_5.bungee.api.plugin.Plugin;
 
 import java.io.File;
@@ -20,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 import static me.megamichiel.animationlib.placeholder.StringBundle.colorAmpersands;
 
-public class AnimLibPlugin extends Plugin implements AnimLib, LoggerNagger {
+public class AnimLibPlugin extends Plugin implements AnimLib<Event> {
 
     private String booleanTrue, booleanFalse;
     private final long startTime = System.currentTimeMillis();
@@ -91,6 +94,7 @@ public class AnimLibPlugin extends Plugin implements AnimLib, LoggerNagger {
                 formulas.put(section.getOriginalKey(key), formula::invoke);
             });
         }
+        DataBase.load(this, cfg.getSection("databases"));
     }
 
     public BungeeCommandAPI getCommandAPI() {
@@ -159,5 +163,18 @@ public class AnimLibPlugin extends Plugin implements AnimLib, LoggerNagger {
         }
         if (secondsLeft > 0) time.append(' ').append(secondsLeft).append('s');
         return time.toString();
+    }
+
+    @Override
+    public <T extends Event> Pipeline<T> newPipeline(Class<T> type) {
+        return PipelineListener.newPipeline(type, this);
+    }
+
+    @Override
+    public void onClose() {}
+
+    @Override
+    public void post(Runnable task, boolean async) {
+        getProxy().getScheduler().runAsync(this, task);
     }
 }

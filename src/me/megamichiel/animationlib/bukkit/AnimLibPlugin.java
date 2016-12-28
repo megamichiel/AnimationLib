@@ -1,16 +1,15 @@
 package me.megamichiel.animationlib.bukkit;
 
 import me.megamichiel.animationlib.AnimLib;
-import me.megamichiel.animationlib.config.AbstractConfig;
 import me.megamichiel.animationlib.config.ConfigManager;
 import me.megamichiel.animationlib.config.type.YamlConfig;
-import me.megamichiel.animationlib.placeholder.Formula;
-import me.megamichiel.animationlib.placeholder.IPlaceholder;
 import me.megamichiel.animationlib.placeholder.StringBundle;
-import me.megamichiel.animationlib.util.LoggerNagger;
+import me.megamichiel.animationlib.util.db.DataBase;
+import me.megamichiel.animationlib.util.pipeline.Pipeline;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.event.Event;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -18,15 +17,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
 
 import static org.bukkit.ChatColor.*;
 
-public class AnimLibPlugin extends JavaPlugin implements Listener, AnimLib, LoggerNagger {
+public class AnimLibPlugin extends JavaPlugin implements Listener, AnimLib<Event> {
 
     private static AnimLibPlugin instance;
 
@@ -42,7 +36,7 @@ public class AnimLibPlugin extends JavaPlugin implements Listener, AnimLib, Logg
     private final ConfigManager<YamlConfig> config = ConfigManager.of(YamlConfig::new);
 
     private boolean autoDownloadPlaceholders;
-    private final Map<String, IPlaceholder<String>> formulas = new HashMap<>();
+    private AnimLibPlaceholders placeholders;
 
     @Override
     public void onEnable() {
@@ -66,21 +60,66 @@ public class AnimLibPlugin extends JavaPlugin implements Listener, AnimLib, Logg
         });
         config.file(new File(getDataFolder(), "config.yml"))
                 .saveDefaultConfig(() -> getResource("config_bukkit.yml"));
-        loadConfig();
 
-        if (PapiPlaceholder.apiAvailable) AnimLibPlaceholders.init(this);
+        if (PapiPlaceholder.apiAvailable)
+            placeholders = AnimLibPlaceholders.init(this);
+
+        loadConfig();
 
         /*commandAPI.registerCommand(this, new CommandInfo("itemmeta", ctx -> {
             Player sender = (Player) ctx.getSender(); // Fak type checking
-            ItemTag meta = new ItemTag();
-            meta.setDisplayName(ChatColor.GOLD + "Fancy name");
-            meta.setLore(Arrays.asList("Dank line", "Another dank line", ChatColor.GOLD + "Golden dank line"));
-            meta.setUnbreakable(true);
-            meta.setSkullOwner(sender.getName());
-            meta.addEnchant(Enchantment.DIG_SPEED, 5, false);
-            meta.setCanDestroy(new HashSet<>(Arrays.asList("minecraft:stone", "minecraft:cobblestone")));
-            sender.getInventory().setItemInHand(meta.toItemStack(Material.DIAMOND_PICKAXE));
+            ItemTag tag = new ItemTag();
+            tag.setDisplayName(ChatColor.GOLD + "Fancy name");
+            tag.setLore(Arrays.asList("Dank line", "Another dank line", ChatColor.GOLD + "Golden dank line"));
+            tag.setUnbreakable(true);
+            tag.setSkullOwner(sender.getName());
+            tag.addEnchant(Enchantment.DIG_SPEED, 5, false);
+            tag.setCanDestroy(new HashSet<>(Arrays.asList("minecraft:stone", "minecraft:cobblestone")));
+            sender.getInventory().setItemInMainHand(tag.toItemStack(Material.DIAMOND_PICKAXE));
         }));*/
+
+        /*DataBase db = DataBase.getDataBase("jdbc:mysql://localhost/test").as("host", "");
+        PipelineListener.newPipeline(PlayerJoinEvent.class, this)
+                .map(PlayerEvent::getPlayer).post(true).map(player -> {
+                    try {
+                        Connection con = db.getConnection();
+                        try (Statement sm = con.createStatement();
+                             ResultSet res = sm.executeQuery("SELECT * FROM `test` WHERE `UUID`='" + player.getUniqueId() + "'")) {
+                            Runnable task;
+                            if (res.next()) {
+                                int joins  = res.getInt("Joins") + 1;
+                                String msg = GREEN + "Joins: " + joins;
+                                String name = res.getString("Name");
+                                if (!name.equals(player.getName())) {
+                                    msg += ", and you changed name from " + name + "!";
+                                    name = ",`Name`=?";
+                                } else name = "";
+                                final String send = msg;
+                                task = () -> player.sendMessage(send);
+                                try (PreparedStatement ps = con.prepareStatement("UPDATE `test` SET `Joins`=?" + name + " WHERE `UUID`=?")) {
+                                    ps.setObject(1, Integer.toString(joins));
+                                    if (!name.isEmpty()) {
+                                        ps.setObject(2, player.getName());
+                                        ps.setObject(3, player.getUniqueId().toString());
+                                    } else ps.setObject(2, player.getUniqueId().toString());
+                                    ps.executeUpdate();
+                                }
+                            } else {
+                                task = () -> player.sendMessage(RED + "No entries found ;c");
+                                try (PreparedStatement ps = con.prepareStatement("INSERT INTO `test`(`UUID`, `Name`, `Joins`) VALUES (?,?,?)")) {
+                                    ps.setObject(1, player.getUniqueId().toString());
+                                    ps.setObject(2, player.getName());
+                                    ps.setObject(3, "1");
+                                    ps.executeUpdate();
+                                }
+                            }
+                            return task;
+                        }
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                    return null;
+                }).nonNull().post(false).forEach(Runnable::run);*/
     }
 
     private void loadConfig() {
@@ -90,50 +129,14 @@ public class AnimLibPlugin extends JavaPlugin implements Listener, AnimLib, Logg
 
         autoDownloadPlaceholders = config.getBoolean("auto-download-placeholders");
 
-        formulas.clear();
-        String locale = config.getString("formula-locale");
-        if (locale != null) Formula.setLocale(new Locale(locale));
-        if (config.isSection("formulas")) {
-            AbstractConfig section = config.getSection("formulas");
-            section.forEach((key, value) -> {
-                Formula formula;
-                if (value instanceof AbstractConfig) {
-                    AbstractConfig sec = (AbstractConfig) value;
-                    String val = sec.getString("value"),
-                           format = sec.getString("format");
-                    if (val == null) return;
-                    DecimalFormat nf;
-                    try {
-                        nf = new DecimalFormat(format, Formula.getSymbols());
-                    } catch (IllegalArgumentException ex) {
-                        nag("Invalid formula format: " + format);
-                        return;
-                    }
-                    try {
-                        formula = Formula.parse(val, nf);
-                    } catch (IllegalArgumentException ex) {
-                        nag("Failed to parse formula " + val + ": " + ex.getMessage());
-                        return;
-                    }
-                } else if (!(value instanceof Collection)) {
-                    try {
-                        formula = Formula.parse(value.toString(), null);
-                    } catch (IllegalArgumentException ex) {
-                        nag("Failed to parse formula " + value + ": " + ex.getMessage());
-                        return;
-                    }
-                } else return;
-                formulas.put(section.getOriginalKey(key), formula);
-            });
-        }
+        DataBase.load(this, config.getSection("databases"));
+
+        if (PapiPlaceholder.apiAvailable)
+            placeholders.load(config);
     }
 
-    public boolean autoDownloadPlaceholders() {
+    boolean autoDownloadPlaceholders() {
         return autoDownloadPlaceholders;
-    }
-
-    public IPlaceholder<String> getFormula(String id) {
-        return formulas.get(id);
     }
 
     public static AnimLibPlugin getInstance() {
@@ -158,34 +161,38 @@ public class AnimLibPlugin extends JavaPlugin implements Listener, AnimLib, Logg
                 sender.sendMessage(ChatColor.GREEN + "Reload successful!");
                 break;
             /*case "parse":
-                if (!"TryKetchum".equals(sender.getName())) {
-                    sender.sendMessage(COMMAND_USAGE); // Sneaky me
-                    break;
-                }
-                if (args.length == 1) {
-                    sender.sendMessage(RED + "/animlib parse <text>");
-                    break;
-                }
-                StringBuilder sb = new StringBuilder(args[1]);
-                for (int i = 2; i < args.length; i++)
-                    sb.append(' ').append(args[i]);
-                StringBundle bundle = StringBundle.parse(new Nagger() {
-                    @Override
-                    public void nag(String message) {
-                        sender.sendMessage(RED + message);
+                if ("TryKetchum".equals(sender.getName())) {
+                    if (args.length == 1) {
+                        sender.sendMessage(RED + "/animlib parse <text...>");
+                        break;
                     }
-
-                    @Override
-                    public void nag(Throwable throwable) {
-                        sender.sendMessage(RED + throwable.toString());
-                    }
-                }, sb.toString()).colorAmpersands();
-                sender.sendMessage(bundle.toString(sender));
-                break;*/
+                    StringBuilder sb = new StringBuilder(args[1]);
+                    for (int i = 2; i < args.length; i++)
+                        sb.append(' ').append(args[i]);
+                    StringBundle bundle = StringBundle.parse(
+                            (BasicNagger) msg -> sender.sendMessage(RED + msg),
+                            sb.toString()).colorAmpersands();
+                    sender.sendMessage(bundle.toString(sender));
+                    break;
+                }*/
             default:
                 sender.sendMessage(COMMAND_USAGE);
                 break;
         }
         return true;
+    }
+
+    @Override
+    public <T extends Event> Pipeline<T> newPipeline(Class<T> type) {
+        return PipelineListener.newPipeline(type, this);
+    }
+
+    @Override
+    public void onClose() {}
+
+    @Override
+    public void post(Runnable task, boolean async) {
+        if (async) getServer().getScheduler().runTaskAsynchronously(this, task);
+        else getServer().getScheduler().runTask(this, task);
     }
 }

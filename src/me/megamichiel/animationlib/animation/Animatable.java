@@ -166,8 +166,9 @@ public abstract class Animatable<E> extends ArrayList<E> {
             }
             if (values.isEmpty() && isSection()) {
                 Object value = getValue(nagger, section, key);
-                if (value != null) {
-                    add(convert(nagger, value));
+                E converted = value == null ? null : convert(nagger, value);
+                if (converted != null) {
+                    add(converted);
                     return true;
                 }
             }

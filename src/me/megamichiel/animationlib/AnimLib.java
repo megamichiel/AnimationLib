@@ -1,12 +1,18 @@
 package me.megamichiel.animationlib;
 
+import me.megamichiel.animationlib.util.LoggerNagger;
+import me.megamichiel.animationlib.util.pipeline.Pipeline;
+import me.megamichiel.animationlib.util.pipeline.PipelineContext;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public interface AnimLib {
+public interface AnimLib<E> extends LoggerNagger, PipelineContext {
+
+    <T extends E> Pipeline<T> newPipeline(Class<T> type);
 
     /**
      * Retrieves the current version of a resource on spigotmc.org<br/>

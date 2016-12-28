@@ -32,9 +32,7 @@ public class BungeePlaceholder implements IPlaceholder<String> {
 
     @Override
     public String invoke(Nagger nagger, Object who, PlaceholderContext ctx) {
-        String str = placeholder.invoke(nagger, (ProxiedPlayer) who);
-        if (ctx != null) ctx.set(who, identifier, str);
-        return str;
+        return ctx != null ? ctx.invoke(who, identifier, this) : invoke(nagger, who);
     }
 
     private static final List<PlaceholderCategory> categories = new ArrayList<>();

@@ -8,11 +8,11 @@ import java.util.function.*;
 
 public class IntPipeline {
 
-    private final Runnable closer;
+    private final PipelineContext ctx;
     private final List<IntPredicate> values = new ArrayList<>();
 
-    IntPipeline(Runnable closer) {
-        this.closer = closer;
+    IntPipeline(PipelineContext ctx) {
+        this.ctx = ctx;
     }
 
     public void accept(int i) {
@@ -22,7 +22,7 @@ public class IntPipeline {
     }
 
     public IntPipeline filter(IntPredicate predicate) {
-        IntPipeline pipeline = new IntPipeline(closer);
+        IntPipeline pipeline = new IntPipeline(ctx);
         forEach(i -> {
             if (predicate.test(i)) pipeline.accept(i);
         });
@@ -30,7 +30,7 @@ public class IntPipeline {
     }
 
     public IntPipeline exclude(IntPredicate predicate) {
-        IntPipeline pipeline = new IntPipeline(closer);
+        IntPipeline pipeline = new IntPipeline(ctx);
         forEach(i -> {
             if (!predicate.test(i)) pipeline.accept(i);
         });
@@ -38,37 +38,37 @@ public class IntPipeline {
     }
     
     public IntPipeline map(IntUnaryOperator mapper) {
-        IntPipeline pipeline = new IntPipeline(closer);
+        IntPipeline pipeline = new IntPipeline(ctx);
         forEach(i -> pipeline.accept(mapper.applyAsInt(i)));
         return pipeline;
     }
     
     public <U> Pipeline<U> mapToObj(IntFunction<? extends U> mapper) {
-        Pipeline<U> pipeline = new Pipeline<>(closer);
+        Pipeline<U> pipeline = new Pipeline<>(ctx);
         forEach(i -> pipeline.accept(mapper.apply(i)));
         return pipeline;
     }
     
     public LongPipeline mapToLong(IntToLongFunction mapper) {
-        LongPipeline pipeline = new LongPipeline(closer);
+        LongPipeline pipeline = new LongPipeline(ctx);
         forEach(i -> pipeline.accept(mapper.applyAsLong(i)));
         return pipeline;
     }
     
     public DoublePipeline mapToDouble(IntToDoubleFunction mapper) {
-        DoublePipeline pipeline = new DoublePipeline(closer);
+        DoublePipeline pipeline = new DoublePipeline(ctx);
         forEach(i -> pipeline.accept(mapper.applyAsDouble(i)));
         return pipeline;
     }
     
     public IntPipeline flatMap(IntFunction<? extends IntPipeline> mapper) {
-        IntPipeline pipeline = new IntPipeline(closer);
+        IntPipeline pipeline = new IntPipeline(ctx);
         forEach(i -> mapper.apply(i).forEach(pipeline::accept));
         return pipeline;
     }
 
     public IntPipeline acceptWhile(BooleanSupplier supplier) {
-        IntPipeline pipeline = new IntPipeline(closer);
+        IntPipeline pipeline = new IntPipeline(ctx);
         values.add(e -> {
             if (supplier.getAsBoolean()) {
                 pipeline.accept(e);
@@ -80,7 +80,7 @@ public class IntPipeline {
     }
 
     public IntPipeline acceptUntil(BooleanSupplier supplier) {
-        IntPipeline pipeline = new IntPipeline(closer);
+        IntPipeline pipeline = new IntPipeline(ctx);
         values.add(e -> {
             if (supplier.getAsBoolean()) return true;
             pipeline.accept(e);
@@ -98,7 +98,7 @@ public class IntPipeline {
     }
 
     public IntPipeline skipUntil(BooleanSupplier supplier) {
-        IntPipeline pipeline = new IntPipeline(closer);
+        IntPipeline pipeline = new IntPipeline(ctx);
         values.add(e -> {
             if (supplier.getAsBoolean()) {
                 forEach(pipeline::accept);
@@ -114,7 +114,7 @@ public class IntPipeline {
     }
 
     public IntPipeline skipWhile(BooleanSupplier supplier) {
-        IntPipeline pipeline = new IntPipeline(closer);
+        IntPipeline pipeline = new IntPipeline(ctx);
         values.add(e -> {
             if (supplier.getAsBoolean()) return false;
             forEach(pipeline::accept);
@@ -137,6 +137,12 @@ public class IntPipeline {
         forEach(action);
         return this;
     }
+
+    public IntPipeline post(boolean async) {
+        IntPipeline pipeline = new IntPipeline(ctx);
+        forEach(i -> ctx.post(() -> pipeline.accept(i), async));
+        return pipeline;
+    }
     
     public void forEach(IntConsumer action) {
         values.add(i -> {
@@ -146,13 +152,13 @@ public class IntPipeline {
     }
     
     public LongPipeline asLongPipeline() {
-        LongPipeline pipeline = new LongPipeline(closer);
+        LongPipeline pipeline = new LongPipeline(ctx);
         forEach(pipeline::accept);
         return pipeline;
     }
     
     public DoublePipeline asDoublePipeline() {
-        DoublePipeline pipeline = new DoublePipeline(closer);
+        DoublePipeline pipeline = new DoublePipeline(ctx);
         forEach(pipeline::accept);
         return pipeline;
     }
@@ -162,6 +168,6 @@ public class IntPipeline {
     }
 
     public void unregister() {
-        closer.run();
+        ctx.onClose();
     }
 }

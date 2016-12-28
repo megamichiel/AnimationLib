@@ -1,6 +1,7 @@
 package me.megamichiel.animationlib.bukkit;
 
 import me.megamichiel.animationlib.util.pipeline.Pipeline;
+import me.megamichiel.animationlib.util.pipeline.PipelineContext;
 import org.bukkit.event.*;
 import org.bukkit.plugin.EventExecutor;
 import org.bukkit.plugin.Plugin;
@@ -8,7 +9,8 @@ import org.bukkit.plugin.RegisteredListener;
 
 import java.lang.reflect.Method;
 
-public class PipelineListener<E extends Event> implements EventExecutor, Listener {
+public class PipelineListener<E extends Event>
+        implements EventExecutor, Listener, PipelineContext {
 
     private static HandlerList getHandlerList(Class<? extends Event> c) {
         try {
@@ -36,21 +38,37 @@ public class PipelineListener<E extends Event> implements EventExecutor, Listene
     }
 
     private final Class<E> type;
+    private final HandlerList handlers;
+    private final Handler handler;
+
+    private final Plugin plugin;
     private final Pipeline<E> head;
 
     private PipelineListener(Class<E> type, EventPriority priority, Plugin plugin) {
         HandlerList handlers = getHandlerList(type);
         if (handlers == null)
             throw new IllegalArgumentException(type.getName() + " has no getHandlerList() method!");
+        this.handlers = handlers;
         this.type = type;
-        Handler handler = new Handler(priority, plugin);
-        handlers.register(handler);
-        head = new Pipeline<>(() -> handlers.unregister(handler));
+        this.plugin = plugin;
+        handlers.register(handler = new Handler(priority, plugin));
+        head = new Pipeline<>(this);
     }
 
     @Override
     public void execute(Listener listener, Event event) throws EventException {
         if (type.isInstance(event)) head.accept(type.cast(event));
+    }
+
+    @Override
+    public void onClose() {
+        handlers.unregister(handler);
+    }
+
+    @Override
+    public void post(Runnable task, boolean async) {
+        if (async) plugin.getServer().getScheduler().runTaskAsynchronously(plugin, task);
+        else plugin.getServer().getScheduler().runTask(plugin, task);
     }
 
     private class Handler extends RegisteredListener {

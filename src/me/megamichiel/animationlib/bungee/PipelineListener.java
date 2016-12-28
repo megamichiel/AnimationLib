@@ -2,6 +2,7 @@ package me.megamichiel.animationlib.bungee;
 
 import com.google.common.collect.Multimap;
 import me.megamichiel.animationlib.util.pipeline.Pipeline;
+import me.megamichiel.animationlib.util.pipeline.PipelineContext;
 import net.md_5.bungee.BungeeCord;
 import net.md_5.bungee.api.plugin.Event;
 import net.md_5.bungee.api.plugin.Listener;
@@ -18,7 +19,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
 @SuppressWarnings("unchecked")
-public class PipelineListener<E extends Event> implements Listener {
+public class PipelineListener<E extends Event> implements Listener, PipelineContext {
 
     private final Lock lock;
     private final Map<Class<?>, Map<Byte, Map<Object, Method[]>>> byListenerAndPriority;
@@ -83,42 +84,21 @@ public class PipelineListener<E extends Event> implements Listener {
     }
 
     private final Class<E> type;
+    private final byte priority;
+
+    private final Plugin plugin;
     private final Pipeline<E> pipeline;
 
     private PipelineListener(Class<E> type, byte priority, Plugin plugin) {
         this.type = type;
-        pipeline = new Pipeline<>(() -> {
-            lock.lock();
-            try {
-                Map<Byte, Map<Object, Method[]>> prioritiesMap = byListenerAndPriority.get(type);
-                if (prioritiesMap != null) {
-                    Map<Object, Method[]> currentPriorityMap = prioritiesMap.get(priority);
-                    if (currentPriorityMap != null) {
-                        currentPriorityMap.remove(this);
-                        if (currentPriorityMap.isEmpty())
-                            prioritiesMap.remove(priority);
-                    }
-                    if (prioritiesMap.isEmpty())
-                        byListenerAndPriority.remove(type);
-                }
-            } finally {
-                lock.unlock();
-            }
-            listenersByPlugin.values().remove(this);
-        });
+        this.priority = priority;
+        this.plugin = plugin;
+        pipeline = new Pipeline<>(this);
         lock.lock();
         try {
-            Map<Byte, Map<Object, Method[]>> prioritiesMap = byListenerAndPriority.get(type);
-            if (prioritiesMap == null) {
-                prioritiesMap = new HashMap<>();
-                byListenerAndPriority.put(type, prioritiesMap);
-            }
-            Map<Object, Method[]> currentPriorityMap = prioritiesMap.get(priority);
-            if (currentPriorityMap == null) {
-                currentPriorityMap = new HashMap<>();
-                prioritiesMap.put(priority, currentPriorityMap);
-            }
-            currentPriorityMap.put(this, new Method[] { callEvent });
+            byListenerAndPriority.computeIfAbsent(type, k -> new HashMap<>())
+                    .computeIfAbsent(priority, k -> new HashMap<>())
+                    .put(this, new Method[] { callEvent });
             bakeHandlers.accept(type);
             listenersByPlugin.put(plugin, this);
         } finally {
@@ -129,5 +109,31 @@ public class PipelineListener<E extends Event> implements Listener {
     private void callEvent(Event event) {
         if (type.isInstance(event))
             pipeline.accept(type.cast(event));
+    }
+
+    @Override
+    public void onClose() {
+        lock.lock();
+        try {
+            Map<Byte, Map<Object, Method[]>> prioritiesMap = byListenerAndPriority.get(type);
+            if (prioritiesMap != null) {
+                Map<Object, Method[]> currentPriorityMap = prioritiesMap.get(priority);
+                if (currentPriorityMap != null) {
+                    currentPriorityMap.remove(this);
+                    if (currentPriorityMap.isEmpty())
+                        prioritiesMap.remove(priority);
+                }
+                if (prioritiesMap.isEmpty())
+                    byListenerAndPriority.remove(type);
+            }
+        } finally {
+            lock.unlock();
+        }
+        listenersByPlugin.values().remove(this);
+    }
+
+    @Override
+    public void post(Runnable task, boolean async) {
+        plugin.getProxy().getScheduler().runAsync(plugin, task);
     }
 }

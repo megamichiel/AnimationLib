@@ -5,7 +5,6 @@ import me.clip.placeholderapi.PlaceholderAPIPlugin;
 import me.clip.placeholderapi.PlaceholderHook;
 import me.clip.placeholderapi.expansion.cloud.CloudExpansion;
 import me.clip.placeholderapi.expansion.cloud.ExpansionCloudManager;
-import me.megamichiel.animationlib.LazyValue;
 import me.megamichiel.animationlib.Nagger;
 import me.megamichiel.animationlib.placeholder.IPlaceholder;
 import me.megamichiel.animationlib.placeholder.PlaceholderContext;
@@ -56,9 +55,7 @@ public class PapiPlaceholder implements IPlaceholder<String> {
 
     @Override
     public String invoke(Nagger nagger, Object who, PlaceholderContext ctx) {
-        String str = invoke(nagger, who);
-        if (ctx != null) ctx.set(who, identifier, str);
-        return str;
+        return ctx != null ? ctx.invoke(who, identifier, this) : invoke(nagger, who);
     }
 
     @Override

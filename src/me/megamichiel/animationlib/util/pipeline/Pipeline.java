@@ -9,11 +9,11 @@ import java.util.function.*;
 
 public class Pipeline<E> {
 
-    private final Runnable closer;
+    private final PipelineContext ctx;
     private final List<Predicate<? super E>> values = new ArrayList<>();
 
-    public Pipeline(Runnable closer) {
-        this.closer = closer;
+    public Pipeline(PipelineContext ctx) {
+        this.ctx = ctx;
     }
 
     public void accept(E value) {
@@ -23,7 +23,7 @@ public class Pipeline<E> {
     }
     
     public Pipeline<E> filter(Predicate<? super E> predicate) {
-        Pipeline<E> pipeline = new Pipeline<>(closer);
+        Pipeline<E> pipeline = new Pipeline<>(ctx);
         forEach(e -> {
             if (predicate.test(e)) pipeline.accept(e);
         });
@@ -35,7 +35,7 @@ public class Pipeline<E> {
     }
 
     public Pipeline<E> exclude(Predicate<? super E> predicate) {
-        Pipeline<E> pipeline = new Pipeline<>(closer);
+        Pipeline<E> pipeline = new Pipeline<>(ctx);
         forEach(e -> {
             if (!predicate.test(e)) pipeline.accept(e);
         });
@@ -43,13 +43,13 @@ public class Pipeline<E> {
     }
     
     public <R> Pipeline<R> map(Function<? super E, ? extends R> mapper) {
-        Pipeline<R> pipeline = new Pipeline<>(closer);
+        Pipeline<R> pipeline = new Pipeline<>(ctx);
         forEach(e -> pipeline.accept(mapper.apply(e)));
         return pipeline;
     }
 
     public <R> Pipeline<R> cast(Class<R> type) {
-        Pipeline<R> pipeline = new Pipeline<>(closer);
+        Pipeline<R> pipeline = new Pipeline<>(ctx);
         forEach(e -> {
             if (type.isInstance(e)) pipeline.accept(type.cast(e));
         });
@@ -57,49 +57,49 @@ public class Pipeline<E> {
     }
     
     public IntPipeline mapToInt(ToIntFunction<? super E> mapper) {
-        IntPipeline pipeline = new IntPipeline(closer);
+        IntPipeline pipeline = new IntPipeline(ctx);
         forEach(e -> pipeline.accept(mapper.applyAsInt(e)));
         return pipeline;
     }
     
     public LongPipeline mapToLong(ToLongFunction<? super E> mapper) {
-        LongPipeline pipeline = new LongPipeline(closer);
+        LongPipeline pipeline = new LongPipeline(ctx);
         forEach(e -> pipeline.accept(mapper.applyAsLong(e)));
         return pipeline;
     }
     
     public DoublePipeline mapToDouble(ToDoubleFunction<? super E> mapper) {
-        DoublePipeline pipeline = new DoublePipeline(closer);
+        DoublePipeline pipeline = new DoublePipeline(ctx);
         forEach(e -> pipeline.accept(mapper.applyAsDouble(e)));
         return pipeline;
     }
     
     public <R> Pipeline<R> flatMap(Function<? super E, ? extends Pipeline<? extends R>> mapper) {
-        Pipeline<R> pipeline = new Pipeline<>(closer);
+        Pipeline<R> pipeline = new Pipeline<>(ctx);
         forEach(e -> mapper.apply(e).forEach(pipeline::accept));
         return pipeline;
     }
     
     public IntPipeline flatMapToInt(Function<? super E, ? extends IntPipeline> mapper) {
-        IntPipeline pipeline = new IntPipeline(closer);
+        IntPipeline pipeline = new IntPipeline(ctx);
         forEach(e -> mapper.apply(e).forEach(pipeline::accept));
         return pipeline;
     }
     
     public LongPipeline flatMapToLong(Function<? super E, ? extends LongPipeline> mapper) {
-        LongPipeline pipeline = new LongPipeline(closer);
+        LongPipeline pipeline = new LongPipeline(ctx);
         forEach(e -> mapper.apply(e).forEach(pipeline::accept));
         return pipeline;
     }
     
     public DoublePipeline flatMapToDouble(Function<? super E, ? extends DoublePipeline> mapper) {
-        DoublePipeline pipeline = new DoublePipeline(closer);
+        DoublePipeline pipeline = new DoublePipeline(ctx);
         forEach(e -> mapper.apply(e).forEach(pipeline::accept));
         return pipeline;
     }
     
     public Pipeline<E> acceptWhile(BooleanSupplier supplier) {
-        Pipeline<E> pipeline = new Pipeline<>(closer);
+        Pipeline<E> pipeline = new Pipeline<>(ctx);
         values.add(e -> {
             if (supplier.getAsBoolean()) {
                 pipeline.accept(e);
@@ -111,7 +111,7 @@ public class Pipeline<E> {
     }
 
     public Pipeline<E> acceptUntil(BooleanSupplier supplier) {
-        Pipeline<E> pipeline = new Pipeline<>(closer);
+        Pipeline<E> pipeline = new Pipeline<>(ctx);
         values.add(e -> {
             if (supplier.getAsBoolean()) return true;
             pipeline.accept(e);
@@ -129,7 +129,7 @@ public class Pipeline<E> {
     }
 
     public Pipeline<E> skipUntil(BooleanSupplier supplier) {
-        Pipeline<E> pipeline = new Pipeline<>(closer);
+        Pipeline<E> pipeline = new Pipeline<>(ctx);
         values.add(e -> {
             if (supplier.getAsBoolean()) {
                 forEach(pipeline::accept);
@@ -145,7 +145,7 @@ public class Pipeline<E> {
     }
 
     public Pipeline<E> skipWhile(BooleanSupplier supplier) {
-        Pipeline<E> pipeline = new Pipeline<>(closer);
+        Pipeline<E> pipeline = new Pipeline<>(ctx);
         values.add(e -> {
             if (supplier.getAsBoolean()) return false;
             forEach(pipeline::accept);
@@ -163,6 +163,12 @@ public class Pipeline<E> {
         AtomicLong l = new AtomicLong(n);
         return skipUntil(() -> l.decrementAndGet() < 0);
     }
+
+    public Pipeline<E> post(boolean async) {
+        Pipeline<E> pipeline = new Pipeline<>(ctx);
+        forEach(e -> ctx.post(() -> pipeline.accept(e), async));
+        return pipeline;
+    }
     
     public void forEach(Consumer<? super E> action) {
         values.add(e -> {
@@ -177,6 +183,6 @@ public class Pipeline<E> {
     }
     
     public void unregister() {
-        if (closer != null) closer.run();
+        if (ctx != null) ctx.onClose();
     }
 }
