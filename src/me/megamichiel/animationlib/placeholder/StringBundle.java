@@ -1,6 +1,7 @@
 package me.megamichiel.animationlib.placeholder;
 
 import me.megamichiel.animationlib.Nagger;
+import me.megamichiel.animationlib.placeholder.ctx.ParsingContext;
 import me.megamichiel.animationlib.util.StringReader;
 
 import java.text.DecimalFormat;
@@ -280,7 +281,7 @@ public class StringBundle extends ArrayList<Object> implements CtxPlaceholder<St
                             format = null;
                         }
                         try {
-                            bundle.add(Formula.parse(reader, format, true));
+                            bundle.add(Formula.parse(reader, ParsingContext.ofFormat(format), true));
                         } catch (IllegalArgumentException ex) {
                             nagger.nag("Failed to parse formula in string " + str + ": " + ex.getMessage());
                         }

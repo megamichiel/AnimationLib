@@ -2,6 +2,7 @@ package me.megamichiel.animationlib.placeholder;
 
 import me.megamichiel.animationlib.Nagger;
 import me.megamichiel.animationlib.bukkit.PapiPlaceholder;
+import me.megamichiel.animationlib.placeholder.ctx.ParsingContext;
 import me.megamichiel.animationlib.util.StringReader;
 
 import java.text.DecimalFormatSymbols;
@@ -47,7 +48,8 @@ public class Formula implements CtxPlaceholder<String> {
             op("sin", Math::sin), op("asin", Math::asin),
             op("cos", Math::cos), op("acos", Math::acos),
             op("tan", Math::tan), op("atan", Math::atan),
-            op("abs", Math::abs)
+            op("abs", Math::abs),
+            op("random", num -> Math.random() * num)
     };
 
     private static int P = 0;
@@ -71,15 +73,11 @@ public class Formula implements CtxPlaceholder<String> {
             SUBTRACT = new Operator(P, "-", (left, right) -> left - right)
     };
 
-    public static Formula parse(String str, NumberFormat format) {
-        return parse(new StringReader(str), format, false);
+    public static Formula parse(String str, ParsingContext ctx) {
+        return parse(new StringReader(str), ctx, false);
     }
 
-    public static Formula parse(StringReader reader, NumberFormat format) {
-        return parse(reader, format, false);
-    }
-
-    public static Formula parse(StringReader reader, NumberFormat format, boolean sub) {
+    public static Formula parse(StringReader reader, ParsingContext ctx, boolean subgroup) {
         List<Object> values = new ArrayList<>();
         Operator last = null;
         String src = reader.source();
@@ -101,12 +99,29 @@ public class Formula implements CtxPlaceholder<String> {
                     values.add(new PapiPlaceholder(sb.toString()));
                     break;
                 case '(':
-                    values.add(parse(reader, format, true));
+                    values.add(parse(reader, ctx, true));
                     break;
                 case ')':
-                    if (!sub) throw new IllegalArgumentException(
+                    if (!subgroup) throw new IllegalArgumentException(
                             "Unexpected ) in " + src + " at index " + reader.index());
                     next = false;
+                    break;
+                case '{':
+                    if (ctx == null)
+                        throw new IllegalArgumentException("Unknown character: " + c + " in "
+                            + reader.source() + " at index " + reader.index());
+                    if (!reader.isReadable())
+                        throw new IllegalArgumentException(src + " ends with a special placeholder character! Did you forget to escape it?");
+                    sb = new StringBuilder();
+                    while ((c = reader.readChar()) != '}') {
+                        sb.append(c);
+                        if (!reader.isReadable())
+                            throw new IllegalArgumentException("Special placeholder not closed off in " + src + "!");
+                    }
+                    IPlaceholder<?> placeholder = ctx.parse(sb.toString());
+                    if (placeholder == null)
+                        throw new IllegalArgumentException("Unknown special placeholder: " + sb + '!');
+                    values.add(placeholder);
                     break;
                 default:
                     if ((c >= '0' && c <= '9') || c == '.') { // Numba
@@ -164,7 +179,7 @@ public class Formula implements CtxPlaceholder<String> {
                                 if (!(reader.isReadable() && reader.readChar() == '('))
                                     throw new IllegalArgumentException("Expected group after "
                                             + String.valueOf(unary.id) + " in " + reader.source());
-                                values.add(parse(reader, format, true));
+                                values.add(parse(reader, ctx, true));
                             }
                             break;
                         } else reader.readChar(); // Re-read the starting char
@@ -174,13 +189,13 @@ public class Formula implements CtxPlaceholder<String> {
                     break;
             }
         }
-        Object o = getElement(reader.source(), values, last, format);
+        Object o = getElement(reader.source(), values, last, ctx);
         if (o instanceof Formula) return (Formula) o;
-        return new Formula(null, Collections.singletonList(o), format);
+        return new Formula(null, Collections.singletonList(o), ctx);
     }
 
     private static Object getElement(String src, List<Object> list,
-                                     Operator op, NumberFormat format) {
+                                     Operator op, ParsingContext ctx) {
         int size = list.size();
         if (size == 0) throw new IllegalArgumentException("Empty group in " + src + "!");
         Object first = list.get(0);
@@ -228,7 +243,7 @@ public class Formula implements CtxPlaceholder<String> {
                     if (o2 instanceof Operator && (last == null
                             || ((Operator) o2).level > last.level))
                         last = (Operator) o2;
-                children.add(getElement(src, sub, last, format));
+                children.add(getElement(src, sub, last, ctx));
                 sub.clear();
             } else sub.add(o);
         }
@@ -238,19 +253,19 @@ public class Formula implements CtxPlaceholder<String> {
                 if (o instanceof Operator && (last == null
                         || ((Operator) o).level > last.level))
                     last = (Operator) o;
-            children.add(getElement(src, sub, last, format));
+            children.add(getElement(src, sub, last, ctx));
         }
-        return new Formula(op, children, format);
+        return new Formula(op, children, ctx);
     }
 
     private final Operator operator;
     private final Object[] values;
     private final NumberFormat format;
 
-    private Formula(Operator operator, List<Object> values, NumberFormat format) {
+    private Formula(Operator operator, List<Object> values, ParsingContext ctx) {
         this.operator = operator;
         this.values = values.toArray(new Object[values.size()]);
-        this.format = format;
+        format = ctx == null ? null : ctx.numberFormat();
     }
 
     public double compute(Nagger nagger, Object who, PlaceholderContext ctx) {

@@ -4,9 +4,9 @@ import me.megamichiel.animationlib.AnimLib;
 import me.megamichiel.animationlib.config.AbstractConfig;
 import me.megamichiel.animationlib.config.ConfigManager;
 import me.megamichiel.animationlib.config.type.YamlConfig;
-import me.megamichiel.animationlib.placeholder.StringBundle;
 import me.megamichiel.animationlib.placeholder.Formula;
-import me.megamichiel.animationlib.util.LoggerNagger;
+import me.megamichiel.animationlib.placeholder.StringBundle;
+import me.megamichiel.animationlib.placeholder.ctx.ParsingContext;
 import me.megamichiel.animationlib.util.db.DataBase;
 import me.megamichiel.animationlib.util.pipeline.Pipeline;
 import net.md_5.bungee.api.plugin.Event;
@@ -78,7 +78,7 @@ public class AnimLibPlugin extends Plugin implements AnimLib<Event> {
                         return;
                     }
                     try {
-                        formula = Formula.parse(val, nf);
+                        formula = Formula.parse(val, ParsingContext.ofFormat(nf));
                     } catch (IllegalArgumentException ex) {
                         nag("Failed to parse formula " + val + ": " + ex.getMessage());
                         return;
@@ -117,7 +117,7 @@ public class AnimLibPlugin extends Plugin implements AnimLib<Event> {
         return formulas.get(id);
     }
 
-    public static String getTime(int seconds) {
+    private static String getTime(int seconds) {
         if (seconds < 60) return seconds + "s";
         int minutes = seconds / 60;
 

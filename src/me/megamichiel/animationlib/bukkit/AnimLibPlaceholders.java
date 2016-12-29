@@ -5,6 +5,7 @@ import me.clip.placeholderapi.PlaceholderHook;
 import me.megamichiel.animationlib.config.AbstractConfig;
 import me.megamichiel.animationlib.placeholder.Formula;
 import me.megamichiel.animationlib.placeholder.IPlaceholder;
+import me.megamichiel.animationlib.placeholder.ctx.ParsingContext;
 import me.megamichiel.animationlib.util.db.SQLHandler;
 import me.megamichiel.animationlib.util.pipeline.Pipeline;
 import org.bukkit.entity.Player;
@@ -64,7 +65,7 @@ public class AnimLibPlaceholders extends PlaceholderHook {
                         return;
                     }
                     try {
-                        formula = Formula.parse(val, nf);
+                        formula = Formula.parse(val, ParsingContext.ofFormat(nf));
                     } catch (IllegalArgumentException ex) {
                         plugin.nag("Failed to parse formula " + val + ": " + ex.getMessage());
                         return;
