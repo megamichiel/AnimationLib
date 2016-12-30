@@ -125,7 +125,7 @@ public abstract class Animatable<E> extends ArrayList<E> {
      */
     public boolean load(Nagger nagger, AbstractConfig section, String key, E defaultValue) {
         this.defaultValue = defaultValue;
-        if (section.isSection(key)) {
+        if (section.isSection(key) && (!isSection() || section.getBoolean("animate-" + key))) {
             AbstractConfig sec = section.getSection(key);
             Map<Integer, Object> values = new HashMap<>();
             int highest = 1;
@@ -162,14 +162,6 @@ public abstract class Animatable<E> extends ArrayList<E> {
                             }
                         }
                     }
-                }
-            }
-            if (values.isEmpty() && isSection()) {
-                Object value = getValue(nagger, section, key);
-                E converted = value == null ? null : convert(nagger, value);
-                if (converted != null) {
-                    add(converted);
-                    return true;
                 }
             }
             errors.forEach(nagger::nag);
