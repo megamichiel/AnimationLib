@@ -15,12 +15,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class SQLHandler implements Runnable {
 
-    /*public static void main(String[] args) {
-        List<Object> list = Arrays.asList("a", "b", "c", "d", "e", 5, 3, 7, true, false);
-        System.out.println(list.stream().reduce(new StringBuilder(),
-                StringBuilder::append, StringBuilder::append).toString()); // It works :D
-    }*/
-
     private static SQLHandler instance;
 
     public static SQLHandler getInstance() {
@@ -50,7 +44,7 @@ public class SQLHandler implements Runnable {
             section.forEach((key, value) -> {
                 if (value instanceof AbstractConfig) {
                     try {
-                        entries.put(key, new Entry((AbstractConfig) value));
+                        entries.put(section.getOriginalKey(key), new Entry((AbstractConfig) value));
                     } catch (IllegalArgumentException e) {
                         lib.nag("Failed to load sql query " + key + "!");
                         lib.nag(e);

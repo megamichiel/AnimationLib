@@ -85,8 +85,8 @@ public class AnimLibPlaceholders extends PlaceholderHook {
         long delay = sql.getRefreshDelay();
         if (delay > 0) {
             sqlTask = plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, sql, delay * 20, delay * 20);
-            (joinPipeline = plugin.newPipeline(PlayerJoinEvent.class)).forEach(sql::playerJoin);
-            (quitPipeline = plugin.newPipeline(PlayerQuitEvent.class)).forEach(sql::playerQuit);
+            (joinPipeline = plugin.newPipeline(PlayerJoinEvent.class)).map(PlayerEvent::getPlayer).forEach(sql::playerJoin);
+            (quitPipeline = plugin.newPipeline(PlayerQuitEvent.class)).map(PlayerEvent::getPlayer).forEach(sql::playerQuit);
         }
     }
 

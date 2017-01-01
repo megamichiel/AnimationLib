@@ -30,8 +30,6 @@ public class AnimLibPlugin extends Plugin implements AnimLib<Event> {
 
     private final BungeeCommandAPI commandAPI = new BungeeCommandAPI();
 
-    private final Map<String, RegisteredPlaceholder> formulas = new HashMap<>();
-
     @Override
     public void onLoad() {
         BungeePlaceholder.onLoad(this);
@@ -58,42 +56,6 @@ public class AnimLibPlugin extends Plugin implements AnimLib<Event> {
         booleanTrue = colorAmpersands(cfg.getString("boolean.true", "yes"));
         booleanFalse = colorAmpersands(cfg.getString("boolean.false", "no"));
 
-        formulas.clear();
-        String locale = cfg.getString("formula-locale");
-        if (locale != null) Formula.setLocale(new Locale(locale));
-        if (cfg.isSection("formulas")) {
-            AbstractConfig section = cfg.getSection("formulas");
-            section.forEach((key, value) -> {
-                Formula formula;
-                if (value instanceof AbstractConfig) {
-                    AbstractConfig sec = (AbstractConfig) value;
-                    String val = sec.getString("value"),
-                            format = sec.getString("format");
-                    if (val == null) return;
-                    DecimalFormat nf;
-                    try {
-                        nf = new DecimalFormat(format, Formula.getSymbols());
-                    } catch (IllegalArgumentException ex) {
-                        nag("Invalid formula format: " + format);
-                        return;
-                    }
-                    try {
-                        formula = Formula.parse(val, ParsingContext.ofFormat(nf));
-                    } catch (IllegalArgumentException ex) {
-                        nag("Failed to parse formula " + val + ": " + ex.getMessage());
-                        return;
-                    }
-                } else if (!(value instanceof Collection)) {
-                    try {
-                        formula = Formula.parse(value.toString(), null);
-                    } catch (IllegalArgumentException ex) {
-                        nag("Failed to parse formula " + value + ": " + ex.getMessage());
-                        return;
-                    }
-                } else return;
-                formulas.put(section.getOriginalKey(key), formula::invoke);
-            });
-        }
         DataBase.load(this, cfg.getSection("databases"));
     }
 
@@ -111,10 +73,6 @@ public class AnimLibPlugin extends Plugin implements AnimLib<Event> {
 
     public String uptime() {
         return getTime((int) TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - startTime));
-    }
-
-    public RegisteredPlaceholder getFormula(String id) {
-        return formulas.get(id);
     }
 
     private static String getTime(int seconds) {
