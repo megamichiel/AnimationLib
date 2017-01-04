@@ -14,6 +14,7 @@ import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.entity.Player;
+import org.bukkit.help.GenericCommandHelpTopic;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 
@@ -131,6 +132,7 @@ public class BukkitCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
     @Override
     public CommandSubscription<Command> registerCommand(Plugin plugin, Command command) {
         getCommandMap().register(plugin.getName(), command);
+        plugin.getServer().getHelpMap().addTopic(new GenericCommandHelpTopic(command));
         return new CommandSubscription<>(this, command);
     }
 

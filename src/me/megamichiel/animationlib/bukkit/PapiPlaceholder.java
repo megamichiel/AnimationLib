@@ -13,6 +13,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 
 /**
@@ -32,12 +35,20 @@ public class PapiPlaceholder implements IPlaceholder<String> {
         }
         apiAvailable = flag;
     }
+
+    private static final Map<String, PapiPlaceholder> registry = Collections.synchronizedMap(new HashMap<>());
+
+    public static PapiPlaceholder resolve(String identifier) {
+        synchronized (registry) {
+            return registry.computeIfAbsent(identifier, PapiPlaceholder::new);
+        }
+    }
     
     private final String plugin, name, identifier;
     private PlaceholderHook handle;
     private boolean notified = false, downloading = false;
     
-    public PapiPlaceholder(String identifier) {
+    private PapiPlaceholder(String identifier) {
         int index = (this.identifier = identifier).indexOf('_');
         if (index > 0) {
             plugin = identifier.substring(0, index);

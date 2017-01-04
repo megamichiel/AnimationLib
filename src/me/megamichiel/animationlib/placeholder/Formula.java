@@ -96,7 +96,7 @@ public class Formula implements CtxPlaceholder<String> {
                         if (!reader.isReadable())
                             throw new IllegalArgumentException("Placeholder not closed off in " + src + "!");
                     }
-                    values.add(new PapiPlaceholder(sb.toString()));
+                    values.add(PapiPlaceholder.resolve(sb.toString()));
                     break;
                 case '(':
                     values.add(parse(reader, ctx, true));

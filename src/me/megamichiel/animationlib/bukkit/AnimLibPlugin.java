@@ -26,7 +26,7 @@ public class AnimLibPlugin extends JavaPlugin implements Listener, AnimLib<Event
 
     @Override
     public void onLoad() {
-        StringBundle.setAdapter(PapiPlaceholder::new);
+        StringBundle.setAdapter(PapiPlaceholder::resolve);
     }
 
     private String update;
