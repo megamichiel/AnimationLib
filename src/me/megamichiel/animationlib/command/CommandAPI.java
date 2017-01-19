@@ -53,14 +53,14 @@ public interface CommandAPI<P, S, C> {
      *
      * @param names the command names
      */
-    void deleteCommands(String... names);
+    List<CommandSubscription<C>> deleteCommands(String... names);
 
     /**
      * Removes known commands from the existing registry, as specified by the predicate
      *
      * @param predicate the acceptor for the commands, where the key is the known label and the value the corresponding command
      */
-    void deleteCommands(BiPredicate<? super String, ? super C> predicate);
+    List<CommandSubscription<C>> deleteCommands(BiPredicate<? super String, ? super C> predicate);
 
     /**
      * Registers a filter for a command

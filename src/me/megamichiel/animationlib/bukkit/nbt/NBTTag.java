@@ -9,9 +9,7 @@ public class NBTTag implements Cloneable {
     private final Map<String, Object> map;
 
     public NBTTag() {
-        util = NBTUtil.getInstance();
-        handle = util.createTag();
-        map = util.getMap(handle);
+        map = (util = NBTUtil.getInstance()).getMap(handle = util.createTag());
     }
 
     public NBTTag(Object handle) {
@@ -56,8 +54,8 @@ public class NBTTag implements Cloneable {
         return list == null ? createList(key) : list;
     }
 
-    public boolean contains(String name) {
-        return map.containsKey(name);
+    public boolean contains(String key) {
+        return map.containsKey(key);
     }
 
     public Object get(String key) {
@@ -84,15 +82,15 @@ public class NBTTag implements Cloneable {
     }
 
     public boolean getBoolean(String key) {
-        return getByte(key) != 0;
+        return getNumber(key, 0).byteValue() != 0;
     }
 
     public boolean getBoolean(String key, boolean def) {
-        return getNumber(key, def ? 1 : 0).intValue() != 0;
+        return getNumber(key, def ? 1 : 0).byteValue() != 0;
     }
 
     public byte getByte(String key) {
-        return getNumber(key, 0).byteValue();
+        return getNumber(key, (byte) 0).byteValue();
     }
 
     public byte getByte(String key, byte def) {
@@ -100,7 +98,7 @@ public class NBTTag implements Cloneable {
     }
 
     public short getShort(String key) {
-        return getNumber(key, 0).shortValue();
+        return getNumber(key, (short) 0).shortValue();
     }
 
     public short getShort(String key, short def) {
@@ -116,7 +114,7 @@ public class NBTTag implements Cloneable {
     }
 
     public long getLong(String key) {
-        return getNumber(key, 0).longValue();
+        return getNumber(key, 0L).longValue();
     }
 
     public long getLong(String key, long def) {
@@ -180,6 +178,11 @@ public class NBTTag implements Cloneable {
         } catch (CloneNotSupportedException ex) {
             return null;
         }
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj == this || (obj instanceof NBTTag && ((NBTTag) obj).handle.equals(handle));
     }
 
     private static boolean isPrimitive(Object o) {

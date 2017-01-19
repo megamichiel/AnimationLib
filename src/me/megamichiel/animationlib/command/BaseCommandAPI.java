@@ -73,7 +73,7 @@ public abstract class BaseCommandAPI<P, S, C> implements CommandAPI<P, S, C> {
     }
 
     @Override
-    public void deleteCommands(String... names) {
+    public List<CommandSubscription<C>> deleteCommands(String... names) {
         List<String> list = Arrays.asList(names);
         Set<C> deleted = new HashSet<>();
         deleteCommands((n, c) -> {
@@ -83,7 +83,7 @@ public abstract class BaseCommandAPI<P, S, C> implements CommandAPI<P, S, C> {
             }
             return false;
         });
-        deleteCommands((n, c) -> deleted.contains(c));
+        return deleteCommands((n, c) -> deleted.contains(c));
     }
 
     @Override

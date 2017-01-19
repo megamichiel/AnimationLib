@@ -99,13 +99,40 @@ public class BungeeCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
     }
 
     @Override
-    public void deleteCommands(BiPredicate<? super String, ? super Command> predicate) {
+    public List<CommandSubscription<Command>> deleteCommands(BiPredicate<? super String, ? super Command> predicate) {
         Map.Entry<String, Command> entry;
-        for (Iterator<Map.Entry<String, Command>> it = getCommandMap().entrySet().iterator(); it.hasNext(); )
+        List<CommandSubscription<Command>> list = new ArrayList<>();
+        for (Iterator<Map.Entry<String, Command>> it = getCommandMap().entrySet().iterator(); it.hasNext(); ) {
             if (predicate.test((entry = it.next()).getKey(), entry.getValue())) {
+                String label = entry.getKey();
+                Command command = entry.getValue();
+                Multimap<Plugin, Command> byPlugin = getCommandsByPlugin();
+                Plugin plugin = getPlugin(byPlugin, command);
+
+                list.add(new CommandSubscription<Command>(this, command) {
+                    @Override
+                    public void unsubscribe() {
+                        getCommandMap().put(label, command);
+
+                        Collection<Command> commands = getCommandsByPlugin().get(plugin);
+                        if (!commands.contains(command))
+                            commands.add(command);
+
+                        unsubscribed = true;
+                    }
+                });
+
                 it.remove();
-                getCommandsByPlugin().values().remove(entry.getValue());
+                byPlugin.values().remove(command);
             }
+        }
+        return list;
+    }
+
+    private Plugin getPlugin(Multimap<Plugin, Command> byPlugin, Command command) {
+        for (Map.Entry<Plugin, Command> entry : byPlugin.entries())
+            if (entry.getValue() == command) return entry.getKey();
+        return null;
     }
 
     @Override

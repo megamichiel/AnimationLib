@@ -1,5 +1,7 @@
 package me.megamichiel.animationlib.bukkit.nbt;
 
+import org.apache.commons.lang.Validate;
+import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
@@ -9,18 +11,17 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-@SuppressWarnings("deprecation")
-public class ItemTag implements ItemMeta, Cloneable {
+@SuppressWarnings({"deprecation", "unused", "WeakerAccess"})
+public class ItemTag {
 
     private final NBTTag tag;
 
     public ItemTag() {
-        tag = new NBTTag(NBTUtil.getInstance().createTag());
+        tag = new NBTTag();
     }
 
     public ItemTag(Object tag) {
@@ -33,7 +34,7 @@ public class ItemTag implements ItemMeta, Cloneable {
         tag = new NBTTag(nbt.getOrCreateTag(stack));
     }
 
-    public NBTTag getTag() {
+    public NBTTag getHandle() {
         return tag;
     }
 
@@ -48,57 +49,41 @@ public class ItemTag implements ItemMeta, Cloneable {
         return toItemStack(new ItemStack(type));
     }
 
-    @Override
-    public boolean hasDisplayName() {
-        NBTTag display = tag.getTag("display");
-        return display != null && display.contains("Name");
+    public ItemStack toItemStack(Material type, int amount) {
+        return toItemStack(new ItemStack(type, amount));
     }
 
-    @Override
-    public String getDisplayName() {
-        NBTTag display = tag.getTag("display");
-        return display == null ? null : display.getString("Name");
+    public ItemStack toItemStack(Material type, int amount, short data) {
+        return toItemStack(new ItemStack(type, amount, data));
     }
 
-    @Override
-    public void setDisplayName(String s) {
-        tag.getOrCreateTag("display").set("Name", s);
+    public boolean hasDisplay() {
+        NBTTag display = tag.getTag("display");
+        return display != null && (display.contains("Name") || display.contains("Lore") || display.contains("color"));
     }
 
-    @Override
-    public boolean hasLore() {
+    public Display getDisplay() {
         NBTTag display = tag.getTag("display");
-        return display != null && display.contains("Lore");
-    }
-
-    @Override
-    public List<String> getLore() {
-        NBTTag display = tag.getTag("display");
-        if (display == null) return null;
-        NBTList lore = tag.getList("Lore");
-        if (lore == null) return null;
+        if (display == null) return new Display();
+        String name = display.getString("Name");
+        NBTList loreList = display.getList("Lore");
         NBTUtil.Modifier<String> modifier = NBTUtil.getInstance().modifier(String.class);
-        return lore.getList().stream().filter(modifier::isInstance)
-                .map(modifier::unwrap).collect(Collectors.toList());
+        List<String> lore = loreList == null ? null : loreList.getList().stream()
+                .filter(modifier::isInstance).map(modifier::unwrap).collect(Collectors.toList());
+        Color color = display.contains("color") ? Color.fromRGB(display.getInt("color")) : null;
+        return new Display(name, lore, color);
     }
 
-    @Override
-    public void setLore(List<String> list) {
-        NBTUtil.Modifier<String> modifier = NBTUtil.getInstance().modifier(String.class);
-        tag.getOrCreateTag("display").set("Lore", list.stream().map(modifier::wrap).collect(Collectors.toList()));
-    }
-
-    public boolean hasLeatherColor() {
-        NBTTag display = tag.getTag("display");
-        return display != null && display.contains("color");
-    }
-
-    private static final Color DEFAULT_LEATHER_COLOR = Color.fromRGB(0xA06540);
-
-    public Color getLeatherColor() {
-        NBTTag display = tag.getTag("display");
-        if (display == null) return DEFAULT_LEATHER_COLOR;
-        return Color.fromRGB(display.getInt("color", 0xA06540));
+    public void setDisplay(Display display) {
+        if (display == null || !(display.hasName() || display.hasLore() || display.hasColor())) {
+            this.tag.remove("display");
+            return;
+        }
+        NBTTag tag = this.tag.getOrCreateTag("display");
+        tag.set("Name", display.getName());
+        NBTUtil.Modifier<String> mod = NBTUtil.getInstance().modifier(String.class);
+        tag.set("Lore", display.hasLore() ? display.getLore().stream().map(mod::wrap).collect(Collectors.toList()) : null);
+        tag.set("color", display.hasColor() ? display.getColor().asRGB() : null);
     }
 
     public boolean isUnbreakable() {
@@ -124,133 +109,114 @@ public class ItemTag implements ItemMeta, Cloneable {
         tag.set("SkullOwner", owner);
     }
 
-    @Override
-    public boolean hasEnchants() {
-        NBTList list = tag.getList("ench");
-        return list != null && !list.isEmpty();
+    public int getRepairCost() {
+        return tag.getInt("RepairCost");
     }
 
-    @Override
-    public boolean hasEnchant(Enchantment enchantment) {
+    public void setRepairCost(int i) {
+        tag.set("RepairCost", i == 0 ? null : i);
+    }
+
+    public Ench getEnchants() {
         NBTList list = tag.getList("ench");
-        if (list == null) return false;
+        if (list == null) return null;
+        Ench ench = new Ench();
+        Map<Enchantment, Integer> handle = ench.handle;
         for (int i = 0; i < list.size(); i++) {
             NBTTag tag = list.getTag(i);
             if (tag == null) continue;
-            if ((tag.getShort("id") & 0xFFFF) == enchantment.getId())
-                return true;
-        }
-        return false;
-    }
-
-    @Override
-    public int getEnchantLevel(Enchantment enchantment) {
-        NBTList list = tag.getList("ench");
-        if (list == null) return 0;
-        for (int i = 0; i < list.size(); i++) {
-            NBTTag tag = list.getTag(i);
-            if (tag == null) continue;
-            if ((tag.getShort("id") & 0xFFFF) == enchantment.getId())
-                return tag.getShort("lvl") & 0xFFFF;
-        }
-        return 0;
-    }
-
-    @Override
-    public Map<Enchantment, Integer> getEnchants() {
-        NBTList list = tag.getList("ench");
-        if (list == null) return Collections.emptyMap();
-        Map<Enchantment, Integer> ench = new HashMap<>();
-        for (int i = 0; i < list.size(); i++) {
-            NBTTag tag = list.getTag(i);
-            if (tag == null) continue;
-            Enchantment e = Enchantment.getById(tag.getShort("id") & 0xFFFF);
-            if (e == null) continue;
-            int lvl = tag.getShort("lvl") & 0xFFFF;
-            if (lvl != 0) ench.put(e, lvl);
+            int id = tag.getShort("id") & 0xFFFF, lvl = tag.getShort("lvl") & 0xFFFF;
+            Enchantment enchant = Enchantment.getById(id);
+            if (enchant != null && lvl > 0) handle.put(enchant, lvl);
         }
         return ench;
     }
 
-    @Override
-    public boolean addEnchant(Enchantment ench, int lvl, boolean ignoreRestrictions) {
-        NBTList list = tag.getList("ench");
-        if (list == null) list = tag.createList("ench");
-        if (!ignoreRestrictions && (lvl < ench.getStartLevel() || lvl > ench.getMaxLevel()))
-            return false;
-        short slvl = (short) lvl;
-        for (int i = 0; i < list.size(); i++) {
+    public void setEnchants(Ench ench) {
+        if (ench == null) tag.remove("ench");
+        else {
+            NBTList list = tag.createList("ench");
+            ench.handle.forEach((enchant, lvl) -> {
+                NBTTag tag = new NBTTag();
+                tag.set("id", enchant.getId());
+                tag.set("lvl", lvl);
+                list.addRaw(tag.getHandle());
+            });
+        }
+    }
+
+    public ItemFlags getItemFlags() {
+        return new ItemFlags(tag.getInt("HideFlags"));
+    }
+
+    public void setItemFlags(ItemFlags itemFlags) {
+        tag.set("HideFlags", itemFlags == null || itemFlags.mask == 0 ? null : itemFlags.mask);
+    }
+
+    public void setItemFlags(int mask) {
+        tag.set("HideFlags", mask == 0 ? null : mask);
+    }
+
+    public boolean hasAttributes() {
+        NBTList list = tag.getList("AttributeModifiers");
+        return list != null && !list.isEmpty();
+    }
+
+    public Attributes getAttributes() {
+        Attributes attributes = new Attributes();
+        NBTList list = tag.getList("AttributeModifiers");
+        if (list == null) return attributes;
+        AttributeOperation[] operations = AttributeOperation.values();
+        for (int i = 0, size = list.size(); i < size; i++) {
             NBTTag tag = list.getTag(i);
-            if (tag == null) continue;
-            if ((tag.getShort("id") & 0xFFFF) == ench.getId()) {
-                if (tag.getShort("lvl") == slvl) return false;
-                tag.set("lvl", slvl);
-                return true;
+            if (tag == null || !tag.contains("Operation") || !tag.contains("Amount")) continue;
+            int operation = tag.getByte("Operation") & 0xFF;
+            if (operation < 0 || operation >= operations.length) continue;
+            String attrName = tag.getString("AttributeName"),
+                    name = tag.getString("Name"), slot = tag.getString("Slot");
+            if (name == null || slot == null) continue;
+            if (attrName == null) attrName = name;
+            double amount = tag.getDouble("Amount");
+            UUID id;
+            if (tag.contains("UUIDMost") && tag.contains("UUIDLeave"))
+                id = new UUID(tag.getLong("UUIDMost"), tag.getLong("UUIDLeast"));
+            else id = UUID.randomUUID();
+            ItemSlot itemSlot;
+            try {
+                itemSlot = ItemSlot.valueOf(slot.toUpperCase(Locale.ENGLISH));
+            } catch (IllegalArgumentException ex) {
+                continue;
             }
+            attributes.getAttribute(new Attribute(attrName)).addModifier(new AttributeModifier(itemSlot, id, name, amount, AttributeOperation.values()[operation]));
         }
-        NBTTag tag = new NBTTag();
-        tag.set("id", (short) ench.getId());
-        tag.set("lvl", slvl);
-        list.addRaw(tag.getHandle());
-        return true;
+        return attributes;
     }
 
-    @Override
-    public boolean removeEnchant(Enchantment enchantment) {
-        NBTList list = tag.getList("ench");
-        if (list == null) return false;
-        for (int i = 0; i < list.size(); i++) {
-            NBTTag tag = list.getTag(i);
-            if (tag == null) continue;
-            if ((tag.getShort("id") & 0xFFFF) == enchantment.getId()) {
-                list.remove(i);
-                return true;
+    public void setAttributes(Attributes attributes) {
+        if (attributes == null) tag.remove("AttributeModifiers");
+        else {
+            NBTList list = tag.createList("AttributeModifiers");
+            for (AttributeInstance instance : attributes.instances.values()) {
+                Map<UUID, AttributeModifier> modifiers = instance.modifiers;
+                if (modifiers.isEmpty()) continue;
+                String attr = instance.attribute.name;
+                for (AttributeModifier modifier : modifiers.values()) {
+                    NBTTag tag = new NBTTag();
+                    String name = modifier.getName();
+                    if (modifier.slot != null)
+                        tag.set("Slot", modifier.slot.name().toLowerCase(Locale.ENGLISH));
+                    if (!name.equals(attr)) tag.set("AttributeName", attr);
+                    tag.set("Name", name);
+                    tag.set("Operation", (byte) modifier.getOperation().ordinal());
+                    tag.set("Amount", modifier.getAmount());
+                    UUID id = modifier.getUniqueId();
+                    tag.set("UUIDMost", id.getMostSignificantBits());
+                    tag.set("UUIDLeast", id.getLeastSignificantBits());
+                    list.addRaw(tag.getHandle());
+                }
             }
+            if (list.isEmpty()) tag.remove("AttributeModifiers");
         }
-        return false;
-    }
-
-    @Override
-    public boolean hasConflictingEnchant(Enchantment enchantment) {
-        NBTList list = tag.getList("ench");
-        if (list == null) return false;
-        for (int i = 0; i < list.size(); i++) {
-            NBTTag tag = list.getTag(i);
-            if (tag == null) continue;
-            Enchantment ench = Enchantment.getById(tag.getShort("id") & 0xFFFF);
-            if (ench != null && enchantment.conflictsWith(ench))
-                return true;
-        }
-        return false;
-    }
-
-    @Override
-    public void addItemFlags(ItemFlag... flags) {
-        int i = tag.getInt("HideFlags");
-        for (ItemFlag flag : flags) i |= 1 << flag.ordinal();
-        tag.set("HideFlags", i);
-    }
-
-    @Override
-    public void removeItemFlags(ItemFlag... flags) {
-        int i = tag.getInt("HideFlags");
-        for (ItemFlag flag : flags) i &= ~(1 << flag.ordinal());
-        if (i == 0) tag.remove("HideFlags");
-        else tag.set("HideFlags", i);
-    }
-
-    @Override
-    public Set<ItemFlag> getItemFlags() {
-        int i = tag.getInt("HideFlags");
-        Set<ItemFlag> flags = new HashSet<>();
-        for (int j = 0; j < ItemFlag.values().length; j++)
-            if ((i & (1 << j)) != 0) flags.add(ItemFlag.values()[j]);
-        return flags;
-    }
-
-    @Override
-    public boolean hasItemFlag(ItemFlag flag) {
-        return (tag.getInt("HideFlags") & (1 << flag.ordinal())) != 0;
     }
 
     public Set<String> getCanDestroy() {
@@ -279,14 +245,14 @@ public class ItemTag implements ItemMeta, Cloneable {
         tag.set("CanPlaceOn", canPlaceOn.stream().map(mod::wrap).collect(Collectors.toSet()));
     }
 
-    public EntityType getSpawnEggType() {
+    public EntityType getEntityType() {
         NBTTag entity = tag.getTag("EntityTag");
         if (entity == null) return null;
         String id = entity.getString("id");
         return id == null ? null : EntityType.fromName(id);
     }
 
-    public void setSpawnEggType(EntityType type) {
+    public void setEntityType(EntityType type) {
         tag.getOrCreateTag("EntityTag").set("id", type.getName());
     }
 
@@ -326,21 +292,317 @@ public class ItemTag implements ItemMeta, Cloneable {
         }
     }
 
+    public int getGeneration() {
+        return tag.getInt("generation");
+    }
+
+    public void setGeneration(int generation) {
+        tag.set("generation", generation <= 0 ? null : Math.min(generation, 2));
+    }
+
     @Override
     public ItemTag clone() {
         try {
             return (ItemTag) super.clone();
         } catch (CloneNotSupportedException ex) {
-            return null;
+            return new ItemTag(tag.clone());
         }
     }
 
     @Override
-    public Map<String, Object> serialize() {
-        throw new UnsupportedOperationException("Not implemented (yet?!?!?!)!");
+    public boolean equals(Object obj) {
+        return obj == this || (obj instanceof ItemTag && ((ItemTag) obj).tag.equals(tag));
     }
 
-    public NBTTag getHandle() {
-        return tag;
+    public static class Display {
+
+        private static final Color DEFAULT_LEATHER_COLOR = Bukkit.getItemFactory().getDefaultLeatherColor();
+
+        private String name;
+        private List<String> lore;
+        private Color color;
+
+        public Display(String name, List<String> lore, Color color) {
+            this.name = name;
+            this.lore = lore == null ? Collections.emptyList() : lore;
+            this.color = color;
+        }
+
+        public Display(String name, List<String> lore) {
+            this(name, lore, null);
+        }
+
+        public Display(String name) {
+            this(name, Collections.emptyList(), null);
+        }
+
+        public Display() {
+            this(null, Collections.emptyList(), null);
+        }
+
+        public Display setName(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Display setLore(List<String> lore) {
+            this.lore = lore;
+            return this;
+        }
+
+        public Display setColor(Color color) {
+            this.color = color;
+            return this;
+        }
+
+        public boolean hasName() {
+            return name != null;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public boolean hasLore() {
+            return !lore.isEmpty();
+        }
+
+        public List<String> getLore() {
+            return lore;
+        }
+
+        public boolean hasColor() {
+            return color != null && !color.equals(DEFAULT_LEATHER_COLOR);
+        }
+
+        public Color getColor() {
+            return color;
+        }
+    }
+
+    public static class Ench {
+
+        private final Map<Enchantment, Integer> handle = new HashMap<>();
+
+        public Ench(Map<Enchantment, Integer> map) {
+            setAll(map);
+        }
+
+        public Ench() {}
+
+        public Map<Enchantment, Integer> getHandle() {
+            return handle;
+        }
+
+        public boolean has(Enchantment ench) {
+            return handle.containsKey(ench);
+        }
+
+        public boolean conflictsWith(Enchantment ench) {
+            for (Enchantment enchant : handle.keySet())
+                if (enchant.conflictsWith(ench)) return true;
+            return false;
+        }
+
+        public int get(Enchantment ench) {
+            Integer level = handle.get(ench);
+            return level == null ? 0 : level;
+        }
+
+        public Ench set(Enchantment ench, int lvl) {
+            if (lvl == 0) handle.remove(ench);
+            else handle.put(ench, lvl);
+            return this;
+        }
+
+        public Ench remove(Enchantment ench) {
+            handle.remove(ench);
+            return this;
+        }
+
+        public Ench setAll(Map<Enchantment, Integer> map) {
+            map.forEach(this::set);
+            return this;
+        }
+    }
+
+    public static class ItemFlags {
+
+        private int mask;
+
+        public ItemFlags(ItemFlag... flags) {
+            for (ItemFlag flag : flags)
+                mask |= 1 << flag.ordinal();
+        }
+
+        public ItemFlags(int mask) {
+            this.mask = mask;
+        }
+
+        public ItemFlags() {}
+
+        public void add(ItemFlag... flags) {
+            for (ItemFlag flag : flags)
+                mask |= 1 << flag.ordinal();
+        }
+
+        public void set(ItemFlag... flags) {
+            mask = 0;
+            add(flags);
+        }
+
+        public void remove(ItemFlag... flags) {
+            int i = 0;
+            for (ItemFlag flag : flags)
+                i |= 1 << flag.ordinal();
+            mask &= ~i;
+        }
+
+        public boolean has(ItemFlag flag) {
+            return (mask & (1 << flag.ordinal())) != 0;
+        }
+    }
+
+    public static class Attributes {
+
+        private final Map<Attribute, AttributeInstance> instances = new HashMap<>();
+
+        public AttributeInstance getAttribute(Attribute attribute) {
+            return instances.computeIfAbsent(attribute, AttributeInstance::new);
+        }
+    }
+
+    public static class AttributeInstance {
+
+        private final Attribute attribute;
+        private final Map<UUID, AttributeModifier> modifiers = new HashMap<>();
+
+        private AttributeInstance(Attribute attribute) {
+            this.attribute = attribute;
+        }
+
+        public Attribute getAttribute() {
+            return attribute;
+        }
+
+        public Set<AttributeModifier> getModifiers() {
+            return new HashSet<>(modifiers.values());
+        }
+
+        public void addModifier(AttributeModifier modifier) {
+            if (modifiers.putIfAbsent(modifier.getUniqueId(), modifier) != null)
+                throw new IllegalArgumentException("Modifier is already applied on this attribute!");
+        }
+
+        public AttributeModifier getModifier(UUID uuid) {
+            return modifiers.get(uuid);
+        }
+
+        public void removeModifier(AttributeModifier modifier) {
+            modifiers.remove(modifier.getUniqueId());
+        }
+    }
+
+    public enum ItemSlot {
+        MAINHAND, OFFHAND, HEAD, CHEST, LEGS, FEET
+    }
+
+    public static class AttributeModifier {
+
+        private final ItemSlot slot;
+        private final UUID uuid;
+        private final String name;
+        private final double amount;
+        private final AttributeOperation operation;
+
+        public AttributeModifier(ItemSlot slot, String name, double amount, AttributeOperation operation) {
+            this(slot, UUID.randomUUID(), name, amount, operation);
+        }
+
+        public AttributeModifier(ItemSlot slot, UUID uuid, String name, double amount, AttributeOperation operation) {
+            Validate.notNull(uuid, "uuid");
+            Validate.notEmpty(name, "Name cannot be empty");
+            Validate.notNull(operation, "operation");
+            this.slot = slot;
+            this.uuid = uuid;
+            this.name = name;
+            this.amount = amount;
+            this.operation = operation;
+        }
+
+        public ItemSlot getSlot() {
+            return slot;
+        }
+
+        public UUID getUniqueId() {
+            return uuid;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public double getAmount() {
+            return amount;
+        }
+
+        public AttributeOperation getOperation() {
+            return operation;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj == this || (obj instanceof AttributeModifier && ((AttributeModifier) obj).getUniqueId().equals(getUniqueId()));
+        }
+
+        @Override
+        public int hashCode() {
+            return getUniqueId().hashCode();
+        }
+    }
+
+    public enum AttributeOperation {
+        ADD_NUMBER, ADD_SCALAR, MULTIPLY_SCALAR_1
+    }
+
+    public static class Attribute {
+
+        public static final Attribute
+                GENERIC_MAX_HEALTH = new Attribute("generic.maxHealth"),
+                GENERIC_FOLLOW_RANGE = new Attribute("generic.followRange"),
+                GENERIC_KNOCKBACK_RESISTANCE = new Attribute("generic.knockbackResistance"),
+                GENERIC_MOVEMENT_SPEED = new Attribute("generic.movementSpeed"),
+                GENERIC_ATTACK_DAMAGE = new Attribute("generic.attackDamage"),
+                GENERIC_ATTACK_SPEED = new Attribute("generic.attackSpeed"),
+                GENERIC_ARMOR = new Attribute("generic.armor"),
+                GENERIC_ARMOR_TOUGHNESS = new Attribute("generic.armorToughness"),
+                GENERIC_LUCK = new Attribute("generic.luck"),
+                HORSE_JUMP_STRENGTH = new Attribute("horse.jumpStrength"),
+                ZOMBIE_SPAWN_REINFORCEMENTS = new Attribute("zombie.spawnReinforcements");
+
+        private final String name;
+
+        public Attribute(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj == this || (obj instanceof Attribute && ((Attribute) obj).name.equals(name));
+        }
+
+        @Override
+        public int hashCode() {
+            return name.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
     }
 }

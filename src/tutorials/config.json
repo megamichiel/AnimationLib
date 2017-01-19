@@ -1,0 +1,108 @@
+{
+  "title": "AnimationLib Configuration",
+  "description": [
+    "This page describes what you can do with AnimationLib's config file"
+  ],
+  "options": {
+    "@": "Animatable",
+    "+": "Animatable with Plus version",
+    "%": "Supports placeholders",
+    "{": "Supports special placeholders",
+    "/": "Formula",
+    "<": "Script"
+  },
+  "config": [
+    {
+      "title": "Features",
+      "values": [
+        {
+          "name": "Auto-Download-Placeholders",
+          "description": "When set to 'true' and a placeholder is used with an unknown expansion, it will be automatically downloaded"
+        }, {
+          "name": "Databases",
+          "options": ":",
+          "description": [
+            "This contains several sections that each specify a database connection",
+            "Use 'url', 'user' and 'password' to specify database information",
+            "NOTE: If you're using a MySQL database, make sure the url starts with 'jdbc:mysql://'",
+            "e.g.:",
+            [
+              "===PLAIN===",
+              "*Databases:*",
+              ">1>*example:*",
+              ">2>*url:* 'jdbc:mysql://localhost/test'",
+              ">2>*user:* 'host'",
+              ">2>*password:* ''"
+            ],
+            "You can use this for #Sql-Queries or with AnimatedMenu Plus's sql statements"
+          ]
+        }, {
+          "name": "Formula-Locale",
+          "description": [
+            "The locale to use to display formula results, e.g.:",
+            [
+              "*en_US:* 123,456 and 345,987.246",
+              "*de_DE:* 123.456 and 345.987,246",
+              "*fr_FR:* 123 456 and 345 987,246"
+            ],
+            "Though I don't know how many of these are implemented (possibly all), a page containing a lot of locales can be found @{http://www.science.co.il/Language/Locale-codes.php|here}"
+          ]
+        }, {
+          "name": "Formulas",
+          "options": ":",
+          "description": [
+            "Specifies various formulas to be used as placeholders",
+            "You can either make the value of a formula some text (simple formula)",
+            "Or you can use a section to specify 'value' (the formula) and 'format' (the @{https://docs.oracle.com/javase/tutorial/i18n/format/decimalFormat.html|number format} to use)",
+            "Formulas account for operator precedence and allow groups",
+            "Valid operators:",
+            [
+              "+, -, *, /, mod, ^, log, max, min",
+              "'mod' returns the remainder after division, so 11 mod 3 results in 2 (11 is 3 times 3 with a remainder of 2)",
+              "'max' and 'min' return the max and min value of the values on the left and right, respectively. 1 max 4 would give 4"
+            ],
+            "You can also use special functions, using <functionname>(<calculation>), like sqrt(4):",
+            [
+              "sqrt, square, round, floor (round down), ceil (round up), ln, (a)sin, (a)cos, (a)tan, abs, random",
+              "'random(n)' returns a value between 0 inclusively and n exclusively (with digits!)"
+            ],
+            "e.g.:",
+            [
+              "===PLAIN===",
+              "*Formulas:*",
+              ">1>*sometext:* '(%player_health% + 3) * 5'",
+              ">1>*somesection:*",
+              ">2>*format:* '\\u0023'",
+              ">2>*value:* '(%player_health% - 5) / 3'"
+            ]
+          ]
+        }, {
+          "name": "Sql-Queries",
+          "options": ":",
+          "description": [
+            "A section containing several sql queries for use in placeholders",
+            "Use 'Refresh-Delay' here to specify the delay in seconds between automatic refreshes",
+            "For each other key, you can use a section with these options:",
+            [
+              "*Database:* The id (key) of the database as specified in #Databases",
+              "*Query:* The SQL query to perform (e.g. select). This supports placeholders",
+              "*Default:* The value to use when the query has not yet been (successfully) refreshed",
+              "*Lifespan:* The amount of times a query result can be used before it is discarded and Default is used again until the next refresh",
+              "*Request-On-Join:* If this is set to 'true', the query will be refreshed when the player joins",
+              "*Auto-Refresh:* If this is set to 'true', this query will be refreshed for all online players as per Refresh-Delay",
+              "*Script:*",
+              [
+                "===PLAIN===",
+                "A string (or string list) that processes the result of the query.",
+                "You can use 'sql', which is a @{http://docs.oracle.com/javase/7/docs/api/java/sql/ResultSet.html|ResultSet}",
+                "Example usage with query 'SELECT `Coins` FROM `Sometable` WHERE `UUID`='%player_uuid%' ':",
+                "*Script:* '@<font style=\"background: #DDD;\">sql.next() ? sql.getInt(\"Coins\") : 0;@</font>'",
+                "Note that the last line must return a value, but not start with 'return'"
+              ]
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

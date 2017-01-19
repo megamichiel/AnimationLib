@@ -247,7 +247,7 @@ public class StringBundle extends ArrayList<Object> implements CtxPlaceholder<St
             } else if (escape) {
                 escape = false;
                 switch (c) {
-                    case 'u': // Unicode character
+                    case 'u': case 'U': // 4-length Unicode character
                         try {
                             builder.append((char) Integer.parseInt(reader.readString(4), 16));
                         } catch (StringIndexOutOfBoundsException ex) {
@@ -258,10 +258,21 @@ public class StringBundle extends ArrayList<Object> implements CtxPlaceholder<St
                                     + "Invalid characters (Allowed: 0-9 and A-F)!");
                         }
                         break;
-                    case '%': //Escaped placeholder character
+                    case 'x': case 'X': // 2-length Unicode character
+                        try {
+                            builder.append((char) Integer.parseInt(reader.readString(2), 16));
+                        } catch (StringIndexOutOfBoundsException ex) {
+                            nagger.nag("Error on parsing unicode character in string " + str + ": "
+                                    + "Expected number to have 2 digits!");
+                        } catch (NumberFormatException ex) {
+                            nagger.nag("Error on parsing unicode character in string " + str + ": "
+                                    + "Invalid characters (Allowed: 0-9 and A-F)!");
+                        }
+                        break;
+                    case '%': // Escaped placeholder character
                         builder.append(c);
                         break;
-                    case 'x': case 'X':
+                    case 'o': case 'O':
                         builder.append(BOX);
                         break;
                     case '(':

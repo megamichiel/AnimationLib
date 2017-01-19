@@ -26,7 +26,8 @@ public class NBTUtil {
     private final Constructor<? extends ItemStack> itemConstructor;
     private final Field handleField, tagField, mapField, listField;
     private final Constructor<?> tagConstructor;
-    private final Map<Class<?>, Modifier<?>> modifiers = new HashMap<>();
+    private final Map<Class<?>, Modifier<?>> modifiers = new HashMap<>(),
+                                             resolved  = new HashMap<>();
     private final String nbtPath;
 
     {
@@ -145,6 +146,8 @@ public class NBTUtil {
 
     public Modifier<?> resolve(Class<?> tagType) throws IllegalArgumentException,
                                                        NoSuchElementException {
+        Modifier<?> modifier = resolved.get(tagType);
+        if (modifier != null) return modifier;
         String name = tagType.getSimpleName(), id = name.substring(6); // "NBTTag".length()
         Class<?> search;
         switch (id) {
@@ -164,19 +167,6 @@ public class NBTUtil {
         return modifier(search);
     }
 
-    private final Map<Class<?>, Class<?>> primitiveBoxes = new HashMap<>();
-
-    {
-        primitiveBoxes.put(Byte.TYPE,       Byte.class);
-        primitiveBoxes.put(Short.TYPE,      Short.class);
-        primitiveBoxes.put(Integer.TYPE,    Integer.class);
-        primitiveBoxes.put(Long.TYPE,       Long.class);
-        primitiveBoxes.put(Float.TYPE,      Float.class);
-        primitiveBoxes.put(Double.TYPE,     Double.class);
-        primitiveBoxes.put(Character.TYPE,  Character.class);
-        primitiveBoxes.put(Boolean.TYPE,    Boolean.class);
-    }
-
     public <T> Modifier<T> modifier(Class<T> type) 
             throws NoSuchElementException, IllegalArgumentException {
         Modifier<?> mod = modifiers.get(type);
@@ -185,7 +175,6 @@ public class NBTUtil {
         String id;
         BiConsumer<Object, Object> converter = null;
         Function<Object, Object> unwrapper = type::cast;
-        if (data.isPrimitive()) data = primitiveBoxes.get(type);
         if (data == byte[].class) id = "ByteArray";
         else if (data == int[].class) id = "IntArray";
         else if (data == Integer.class) id = "Int";
@@ -230,9 +219,10 @@ public class NBTUtil {
             unwrapper = Function.identity();
         } else id = data.getSimpleName();
         try {
-            Modifier<T> res = new Modifier<>(
-                    Class.forName(nbtPath + id), data, converter, unwrapper);
+            Class<?> nms = Class.forName(nbtPath + id);
+            Modifier<T> res = new Modifier<>(nms, data, converter, unwrapper);
             modifiers.put(type, res);
+            resolved.put(nms, res);
             return res;
         } catch (ClassNotFoundException ex) {
             throw new IllegalArgumentException("No corresponding NBT class found", ex);
@@ -252,6 +242,9 @@ public class NBTUtil {
 
         Modifier(Class<?> nms, Class<?> type, BiConsumer<Object, Object> converter,
                  Function<Object, Object> unwrapper) throws NoSuchElementException {
+            this.converter = converter;
+            this.unwrapper = unwrapper;
+
             Class<?> search = type;
             try {
                 if (type.getPackage().getName().equals("java.lang"))
@@ -265,18 +258,14 @@ public class NBTUtil {
                 throw new NoSuchElementException("No constructor found in " + nms.getName() + "!");
             }
             wrapper.setAccessible(true);
-            this.converter = converter;
-            Field f = null;
             for (Field field : nms.getDeclaredFields()) {
                 if (field.getType() == search) {
                     field.setAccessible(true);
-                    f = field;
-                    break;
+                    data = field;
+                    return;
                 }
             }
-            if (f == null) throw new NoSuchElementException("No data field found for " + type + "!");
-            data = f;
-            this.unwrapper = unwrapper;
+            throw new NoSuchElementException("No data field found for " + type + "!");
         }
 
         public Object wrap(T value) throws IllegalStateException {

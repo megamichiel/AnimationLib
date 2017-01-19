@@ -65,61 +65,6 @@ public class AnimLibPlugin extends JavaPlugin implements Listener, AnimLib<Event
             placeholders = AnimLibPlaceholders.init(this);
 
         loadConfig();
-
-        /*commandAPI.registerCommand(this, new CommandInfo("itemmeta", ctx -> {
-            Player sender = (Player) ctx.getSender(); // Fak type checking
-            ItemTag tag = new ItemTag();
-            tag.setDisplayName(ChatColor.GOLD + "Fancy name");
-            tag.setLore(Arrays.asList("Dank line", "Another dank line", ChatColor.GOLD + "Golden dank line"));
-            tag.setUnbreakable(true);
-            tag.setSkullOwner(sender.getName());
-            tag.addEnchant(Enchantment.DIG_SPEED, 5, false);
-            tag.setCanDestroy(new HashSet<>(Arrays.asList("minecraft:stone", "minecraft:cobblestone")));
-            sender.getInventory().setItemInMainHand(tag.toItemStack(Material.DIAMOND_PICKAXE));
-        }));*/
-
-        /*DataBase db = DataBase.getDataBase("jdbc:mysql://localhost/test").as("host", "");
-        PipelineListener.newPipeline(PlayerJoinEvent.class, this)
-                .map(PlayerEvent::getPlayer).post(true).map(player -> {
-                    try {
-                        Connection con = db.getConnection();
-                        try (Statement sm = con.createStatement();
-                             ResultSet res = sm.executeQuery("SELECT * FROM `test` WHERE `UUID`='" + player.getUniqueId() + "'")) {
-                            Runnable task;
-                            if (res.next()) {
-                                int joins  = res.getInt("Joins") + 1;
-                                String msg = GREEN + "Joins: " + joins;
-                                String name = res.getString("Name");
-                                if (!name.equals(player.getName())) {
-                                    msg += ", and you changed name from " + name + "!";
-                                    name = ",`Name`=?";
-                                } else name = "";
-                                final String send = msg;
-                                task = () -> player.sendMessage(send);
-                                try (PreparedStatement ps = con.prepareStatement("UPDATE `test` SET `Joins`=?" + name + " WHERE `UUID`=?")) {
-                                    ps.setObject(1, Integer.toString(joins));
-                                    if (!name.isEmpty()) {
-                                        ps.setObject(2, player.getName());
-                                        ps.setObject(3, player.getUniqueId().toString());
-                                    } else ps.setObject(2, player.getUniqueId().toString());
-                                    ps.executeUpdate();
-                                }
-                            } else {
-                                task = () -> player.sendMessage(RED + "No entries found ;c");
-                                try (PreparedStatement ps = con.prepareStatement("INSERT INTO `test`(`UUID`, `Name`, `Joins`) VALUES (?,?,?)")) {
-                                    ps.setObject(1, player.getUniqueId().toString());
-                                    ps.setObject(2, player.getName());
-                                    ps.setObject(3, "1");
-                                    ps.executeUpdate();
-                                }
-                            }
-                            return task;
-                        }
-                    } catch (SQLException ex) {
-                        ex.printStackTrace();
-                    }
-                    return null;
-                }).nonNull().post(false).forEach(Runnable::run);*/
     }
 
     private void loadConfig() {

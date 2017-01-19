@@ -6,6 +6,7 @@ import me.megamichiel.animationlib.command.CommandInfo;
 import me.megamichiel.animationlib.command.CommandSubscription;
 import me.megamichiel.animationlib.command.exec.CommandContext;
 import me.megamichiel.animationlib.command.exec.TabCompleteContext;
+import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.World;
@@ -15,6 +16,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.entity.Player;
 import org.bukkit.help.GenericCommandHelpTopic;
+import org.bukkit.help.HelpMap;
+import org.bukkit.help.HelpTopic;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 
@@ -75,7 +78,10 @@ public class BukkitCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
     }
 
     private Map<String, Command> getKnownCommandsMap() {
-        CommandMap map = getCommandMap();
+        return getKnownCommandsMap(getCommandMap());
+    }
+
+    private Map<String, Command> getKnownCommandsMap(CommandMap map) {
         Field f = fields.computeIfAbsent(map.getClass(), c -> {
             try {
                 Field field = c.getDeclaredField("knownCommands");
@@ -104,11 +110,39 @@ public class BukkitCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
     }
 
     @Override
-    public void deleteCommands(BiPredicate<? super String, ? super Command> predicate) {
+    public List<CommandSubscription<Command>> deleteCommands(BiPredicate<? super String, ? super Command> predicate) {
         Map.Entry<String, Command> entry;
-        for (Iterator<Map.Entry<String, Command>> it = getKnownCommandsMap().entrySet().iterator(); it.hasNext();)
-            if (predicate.test((entry = it.next()).getKey(), entry.getValue()))
+        CommandMap map = getCommandMap();
+        HelpMap helpMap = getServer().getHelpMap();
+
+        List<CommandSubscription<Command>> list = new ArrayList<>();
+
+        for (Iterator<Map.Entry<String, Command>> it = getKnownCommandsMap(map).entrySet().iterator(); it.hasNext();) {
+            if (predicate.test((entry = it.next()).getKey(), entry.getValue())) {
+                String label = entry.getKey();
+                Command command = entry.getValue();
+
                 it.remove();
+                command.unregister(map);
+
+                HelpTopic topic1 = helpMap.getHelpTopic(label), topic2 = helpMap.getHelpTopic("/" + label);
+                if (topic1 != null) helpMap.getHelpTopics().remove(topic1);
+                if (topic2 != null) helpMap.getHelpTopics().remove(topic2);
+
+                list.add(new CommandSubscription<Command>(this, command) {
+                    @Override
+                    public void unsubscribe() {
+                        Map<String, Command> map = getKnownCommandsMap();
+                        map.put(label, command);
+                        if (topic1 != null) helpMap.addTopic(topic1);
+                        if (topic2 != null) helpMap.addTopic(topic2);
+
+                        unsubscribed = true;
+                    }
+                });
+            }
+        }
+        return list;
     }
 
     @Override
@@ -132,7 +166,11 @@ public class BukkitCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
     @Override
     public CommandSubscription<Command> registerCommand(Plugin plugin, Command command) {
         getCommandMap().register(plugin.getName(), command);
-        plugin.getServer().getHelpMap().addTopic(new GenericCommandHelpTopic(command));
+        HelpMap helpMap = plugin.getServer().getHelpMap();
+        helpMap.addTopic(new GenericCommandHelpTopic(command));
+        for (String alias : command.getAliases()) {
+            helpMap.addTopic(new CommandAliasHelpTopic(alias, command.getLabel(), helpMap));
+        }
         return new CommandSubscription<>(this, command);
     }
 
@@ -308,6 +346,38 @@ public class BukkitCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
                     unsubscribed = true;
                 }
             };
+        }
+    }
+
+
+    private static class CommandAliasHelpTopic extends HelpTopic {
+
+        private final String aliasFor;
+        private final HelpMap helpMap;
+
+        public CommandAliasHelpTopic(String alias, String aliasFor, HelpMap helpMap) {
+            this.aliasFor = ("/" + aliasFor);
+            this.helpMap = helpMap;
+            this.name = ("/" + alias);
+            Validate.isTrue(!this.name.equals(this.aliasFor), "Command " + this.name + " cannot be alias for itself");
+            this.shortText = (ChatColor.YELLOW + "Alias for " + ChatColor.WHITE + this.aliasFor);
+        }
+
+        public String getFullText(CommandSender forWho) {
+            StringBuilder sb = new StringBuilder(this.shortText);
+            HelpTopic aliasForTopic = this.helpMap.getHelpTopic(this.aliasFor);
+            if (aliasForTopic != null) {
+                sb.append("\n").append(aliasForTopic.getFullText(forWho));
+            }
+            return sb.toString();
+        }
+
+        public boolean canSee(CommandSender commandSender) {
+            if (this.amendedPermission == null) {
+                HelpTopic aliasForTopic = this.helpMap.getHelpTopic(this.aliasFor);
+                return aliasForTopic != null && aliasForTopic.canSee(commandSender);
+            }
+            return commandSender.hasPermission(this.amendedPermission);
         }
     }
 }

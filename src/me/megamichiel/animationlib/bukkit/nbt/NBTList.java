@@ -3,7 +3,7 @@ package me.megamichiel.animationlib.bukkit.nbt;
 import java.util.ArrayList;
 import java.util.List;
 
-public class NBTList {
+public class NBTList implements Cloneable {
 
     private final NBTUtil util;
     private final Object handle;
@@ -123,6 +123,20 @@ public class NBTList {
 
     public List<Object> getList() {
         return list;
+    }
+
+    @Override
+    public NBTList clone() {
+        try {
+            return (NBTList) super.clone();
+        } catch (CloneNotSupportedException ex) {
+            return new NBTList(handle);
+        }
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj == this || (obj instanceof NBTList && ((NBTList) obj).handle.equals(handle));
     }
 
     private static boolean isPrimitive(Object o) {
