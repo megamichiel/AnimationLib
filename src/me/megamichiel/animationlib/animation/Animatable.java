@@ -41,6 +41,13 @@ public abstract class Animatable<E> extends ArrayList<E> {
     }
 
     /**
+     * @return whether {@link #size()} is > 1
+     */
+    public boolean isAnimated() {
+        return size() > 1;
+    }
+
+    /**
      * Returns the value retrieved by {@link #get()}, and moves to the next frame
      */
     public E next() {

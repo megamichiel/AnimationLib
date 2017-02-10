@@ -1,24 +1,16 @@
 package me.megamichiel.animationlib.util.pipeline;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.*;
 
-public class LongPipeline {
-    
-    private final PipelineContext ctx;
-    private final List<LongPredicate> values = new ArrayList<>();
+public class LongPipeline extends AbstractPipeline<LongPredicate> {
 
-    LongPipeline(PipelineContext ctx) {
-        this.ctx = ctx;
+    public LongPipeline(PipelineContext ctx) {
+        super(ctx);
     }
     
     public void accept(long l) {
-        for (Iterator<LongPredicate> it = values.iterator(); it.hasNext();)
-            if (it.next().test(l))
-                it.remove();
+        _accept(p -> p.test(l));
     }
 
     public LongPipeline filter(LongPredicate predicate) {
@@ -67,7 +59,7 @@ public class LongPipeline {
 
     public LongPipeline acceptWhile(BooleanSupplier supplier) {
         LongPipeline pipeline = new LongPipeline(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) {
                 pipeline.accept(e);
                 return false;
@@ -79,7 +71,7 @@ public class LongPipeline {
 
     public LongPipeline acceptUntil(BooleanSupplier supplier) {
         LongPipeline pipeline = new LongPipeline(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) return true;
             pipeline.accept(e);
             return false;
@@ -97,7 +89,7 @@ public class LongPipeline {
 
     public LongPipeline skipUntil(BooleanSupplier supplier) {
         LongPipeline pipeline = new LongPipeline(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) {
                 forEach(pipeline::accept);
                 return true;
@@ -113,7 +105,7 @@ public class LongPipeline {
 
     public LongPipeline skipWhile(BooleanSupplier supplier) {
         LongPipeline pipeline = new LongPipeline(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) return false;
             forEach(pipeline::accept);
             return true;
@@ -143,7 +135,7 @@ public class LongPipeline {
     }
     
     public void forEach(LongConsumer action) {
-        values.add(i -> {
+        add(i -> {
             action.accept(i);
             return false;
         });
@@ -163,9 +155,5 @@ public class LongPipeline {
     
     public Pipeline<Long> boxed() {
         return mapToObj(Long::new);
-    }
-
-    public void unregister() {
-        ctx.onClose();
     }
 }

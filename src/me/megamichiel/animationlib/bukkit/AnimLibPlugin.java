@@ -10,7 +10,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.event.Event;
-import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -20,7 +19,7 @@ import java.io.IOException;
 
 import static org.bukkit.ChatColor.*;
 
-public class AnimLibPlugin extends JavaPlugin implements Listener, AnimLib<Event> {
+public class AnimLibPlugin extends JavaPlugin implements AnimLib<Event> {
 
     private static AnimLibPlugin instance;
 
@@ -46,12 +45,11 @@ public class AnimLibPlugin extends JavaPlugin implements Listener, AnimLib<Event
                 String update = AnimLib.getVersion(22295);
                 if (!update.equals(getDescription().getVersion())) {
                     getLogger().info("A new version is available: " + update);
-                    this.update = DARK_GRAY.toString() + '[' + GOLD + "AnimationLib"
-                            + DARK_GRAY + ']' + GREEN
-                            + " A new version (" + update + ") is available";
-                    PipelineListener.newPipeline(PlayerJoinEvent.class, this)
+                    this.update = DARK_GRAY.toString() + '[' + GOLD + "AnimationLib" + DARK_GRAY
+                            + ']' + GREEN + " A new version (" + update + ") is available";
+                    newPipeline(PlayerJoinEvent.class)
                             .map(PlayerEvent::getPlayer)
-                            .filter(p -> p.hasPermission("animlib.seeupdate"))
+                            .filter(p -> p.hasPermission("animlib.seeUpdate"))
                             .forEach(p -> p.sendMessage(this.update));
                 }
             } catch (IOException ex) {
@@ -61,8 +59,10 @@ public class AnimLibPlugin extends JavaPlugin implements Listener, AnimLib<Event
         config.file(new File(getDataFolder(), "config.yml"))
                 .saveDefaultConfig(() -> getResource("config_bukkit.yml"));
 
-        if (PapiPlaceholder.apiAvailable)
+        if (PapiPlaceholder.apiAvailable) {
             placeholders = AnimLibPlaceholders.init(this);
+            PapiPlaceholder.registerListener(this);
+        }
 
         loadConfig();
     }

@@ -1,24 +1,16 @@
 package me.megamichiel.animationlib.util.pipeline;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.*;
 
-public class IntPipeline {
+public class IntPipeline extends AbstractPipeline<IntPredicate> {
 
-    private final PipelineContext ctx;
-    private final List<IntPredicate> values = new ArrayList<>();
-
-    IntPipeline(PipelineContext ctx) {
-        this.ctx = ctx;
+    public IntPipeline(PipelineContext ctx) {
+        super(ctx);
     }
 
     public void accept(int i) {
-        for (Iterator<IntPredicate> it = values.iterator(); it.hasNext();)
-            if (it.next().test(i))
-                it.remove();
+        _accept(p -> p.test(i));
     }
 
     public IntPipeline filter(IntPredicate predicate) {
@@ -69,7 +61,7 @@ public class IntPipeline {
 
     public IntPipeline acceptWhile(BooleanSupplier supplier) {
         IntPipeline pipeline = new IntPipeline(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) {
                 pipeline.accept(e);
                 return false;
@@ -81,7 +73,7 @@ public class IntPipeline {
 
     public IntPipeline acceptUntil(BooleanSupplier supplier) {
         IntPipeline pipeline = new IntPipeline(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) return true;
             pipeline.accept(e);
             return false;
@@ -99,7 +91,7 @@ public class IntPipeline {
 
     public IntPipeline skipUntil(BooleanSupplier supplier) {
         IntPipeline pipeline = new IntPipeline(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) {
                 forEach(pipeline::accept);
                 return true;
@@ -115,7 +107,7 @@ public class IntPipeline {
 
     public IntPipeline skipWhile(BooleanSupplier supplier) {
         IntPipeline pipeline = new IntPipeline(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) return false;
             forEach(pipeline::accept);
             return true;
@@ -145,7 +137,7 @@ public class IntPipeline {
     }
     
     public void forEach(IntConsumer action) {
-        values.add(i -> {
+        add(i -> {
             action.accept(i);
             return false;
         });
@@ -165,9 +157,5 @@ public class IntPipeline {
     
     public Pipeline<Integer> boxed() {
         return mapToObj(Integer::new);
-    }
-
-    public void unregister() {
-        ctx.onClose();
     }
 }

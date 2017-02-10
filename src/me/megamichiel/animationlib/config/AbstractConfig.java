@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -51,8 +52,7 @@ public abstract class AbstractConfig {
     }
 
     public <T> T get(String path, Function<Object, T> func, T def) {
-        return Optional.ofNullable(get(path))
-                .map(o -> o == null ? def : func.apply(o)).orElse(def);
+        return Optional.ofNullable(get(path)).map(func).orElse(def);
     }
 
     public String getString(String path, String def) {
@@ -95,9 +95,17 @@ public abstract class AbstractConfig {
         return get(path) instanceof Number;
     }
 
+    public long getLong(String path) {
+        return getLong(path, 0L);
+    }
+
     public long getLong(String path, long def) {
         Object o = get(path, def);
         return o instanceof Number ? ((Number) o).longValue() : 0;
+    }
+
+    public double getDouble(String path) {
+        return getDouble(path, 0D);
     }
 
     public double getDouble(String path, double def) {
@@ -167,6 +175,13 @@ public abstract class AbstractConfig {
 
     public void forEach(BiConsumer<String, Object> action) {
         values().forEach(action);
+    }
+
+    public <T> void forEach(BiFunction<String, Object, T> func, BiConsumer<String, T> action) {
+        values().forEach((key, value) -> {
+            T mapped = func.apply(key, value);
+            if (mapped != null) action.accept(key, mapped);
+        });
     }
 
     public void forEachKey(Consumer<String> action) {

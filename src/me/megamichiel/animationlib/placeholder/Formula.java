@@ -28,7 +28,12 @@ public class Formula implements CtxPlaceholder<String> {
     private static double getValue(Nagger nagger, Object who, Object o, PlaceholderContext ctx) {
         if (o instanceof Double) return (Double) o;
         if (o instanceof Formula) return ((Formula) o).compute(nagger, who, ctx);
-        if (o instanceof IPlaceholder) return Double.parseDouble(((IPlaceholder) o).invoke(nagger, who, ctx).toString());
+        if (o instanceof IPlaceholder) {
+            Object val = ((IPlaceholder) o).invoke(nagger, who, ctx);
+            if (val instanceof Number)
+                return ((Number) val).doubleValue();
+            return Double.parseDouble(val.toString());
+        }
         if (o instanceof UnaryFunction) return ((UnaryFunction) o).compute(nagger, who, ctx);
         throw new IllegalArgumentException("Unknown object: " + o);
     }

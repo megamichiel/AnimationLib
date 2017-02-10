@@ -1,25 +1,17 @@
 package me.megamichiel.animationlib.util.pipeline;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.*;
 
-public class Pipeline<E> {
-
-    private final PipelineContext ctx;
-    private final List<Predicate<? super E>> values = new ArrayList<>();
+public class Pipeline<E> extends AbstractPipeline<Predicate<? super E>> {
 
     public Pipeline(PipelineContext ctx) {
-        this.ctx = ctx;
+        super(ctx);
     }
 
     public void accept(E value) {
-        for (Iterator<Predicate<? super E>> it = values.iterator(); it.hasNext(); )
-            if (it.next().test(value))
-                it.remove();
+        _accept(p -> p.test(value));
     }
     
     public Pipeline<E> filter(Predicate<? super E> predicate) {
@@ -100,7 +92,7 @@ public class Pipeline<E> {
     
     public Pipeline<E> acceptWhile(BooleanSupplier supplier) {
         Pipeline<E> pipeline = new Pipeline<>(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) {
                 pipeline.accept(e);
                 return false;
@@ -112,7 +104,7 @@ public class Pipeline<E> {
 
     public Pipeline<E> acceptUntil(BooleanSupplier supplier) {
         Pipeline<E> pipeline = new Pipeline<>(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) return true;
             pipeline.accept(e);
             return false;
@@ -130,7 +122,7 @@ public class Pipeline<E> {
 
     public Pipeline<E> skipUntil(BooleanSupplier supplier) {
         Pipeline<E> pipeline = new Pipeline<>(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) {
                 forEach(pipeline::accept);
                 return true;
@@ -146,7 +138,7 @@ public class Pipeline<E> {
 
     public Pipeline<E> skipWhile(BooleanSupplier supplier) {
         Pipeline<E> pipeline = new Pipeline<>(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) return false;
             forEach(pipeline::accept);
             return true;
@@ -171,7 +163,7 @@ public class Pipeline<E> {
     }
     
     public void forEach(Consumer<? super E> action) {
-        values.add(e -> {
+        add(e -> {
             action.accept(e);
             return false;
         });
@@ -180,9 +172,5 @@ public class Pipeline<E> {
     public Pipeline<E> peek(Consumer<? super E> action) {
         forEach(action);
         return this;
-    }
-    
-    public void unregister() {
-        if (ctx != null) ctx.onClose();
     }
 }

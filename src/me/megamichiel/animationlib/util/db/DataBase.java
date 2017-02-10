@@ -180,7 +180,7 @@ public class DataBase {
         }
     }
 
-    public class MultiCloseable implements Closeable {
+    public static class MultiCloseable implements Closeable {
 
         private final AutoCloseable[] closeables;
 
@@ -190,15 +190,36 @@ public class DataBase {
 
         @Override
         public void close() throws IOException {
-            List<IOException> thrown = new ArrayList<>();
+            List<Exception> thrown = new ArrayList<>();
             for (AutoCloseable closeable : closeables) {
                 try { // Make sure every closeable has had a close attempt
                     closeable.close();
                 } catch (Exception ex) {
-                    thrown.add(ex instanceof IOException ? (IOException) ex : new IOException(ex));
+                    thrown.add(ex);
                 }
             }
-            if (!thrown.isEmpty()) throw thrown.get(0);
+            if (thrown.size() == 1) {
+                throw thrown.get(0) instanceof IOException ? (IOException) thrown.get(0) : new IOException(thrown.get(0));
+            }
+            if (!thrown.isEmpty()) {
+                throw new MultiCloseException(thrown);
+            }
+        }
+    }
+
+    public static class MultiCloseException extends IOException {
+
+        private static final long serialVersionUID = -6759415315426709197L;
+
+        private final Exception[] sources;
+
+        public MultiCloseException(List<Exception> sources) {
+            super(sources.size() + " exceptions were thrown");
+            this.sources = sources.toArray(new Exception[sources.size()]);
+        }
+
+        public Exception[] getSources() {
+            return sources;
         }
     }
 

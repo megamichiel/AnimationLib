@@ -1,0 +1,83 @@
+# AnimationLib Configuration #
+This page describes what you can do with AnimationLib's config file  
+### Summary ###
+- [Auto-Download-Placeholders](#user-content-auto-download-placeholders)
+- [Databases](#user-content-databases)
+- [Formula-Locale](#user-content-formula-locale)
+- [Formulas](#user-content-formulas)
+- [Sql-Queries](#user-content-sql-queries)
+
+- #### Auto-Download-Placeholders ####
+  When set to 'true' and a placeholder is used with an unknown expansion, it will be automatically downloaded  
+
+- #### Databases ####
+  Section  
+  \------------------------------  
+  This contains several sections that each specify a database connection  
+  Use 'url', 'user' and 'password' to specify database information  
+  NOTE: If you're using a MySQL database, make sure the url starts with 'jdbc:mysql://'  
+  e.g.:  
+
+```YAML
+Databases:
+  example:
+    url: 'jdbc:mysql://localhost/test'
+    user: 'host'
+    password: ''
+```
+  You can use this for [Sql-Queries](#user-content-sql-queries) or with AnimatedMenu Plus's sql statements  
+
+- #### Formula-Locale ####
+  The locale to use to display formula results, e.g.:  
+    - **en_US:** 123,456 and 345,987.246
+    - **de_DE:** 123.456 and 345.987,246
+    - **fr_FR:** 123 456 and 345 987,246
+
+  Though I don't know how many of these are implemented (possibly all), a page containing a lot of locales can be found [here](http://www.science.co.il/Language/Locale-codes.php)  
+
+- #### Formulas ####
+  Section  
+  \------------------------------  
+  Specifies various formulas to be used as placeholders  
+  You can either make the value of a formula some text (simple formula)  
+  Or you can use a section to specify 'value' (the formula) and 'format' (the [number format](https://docs.oracle.com/javase/tutorial/i18n/format/decimalFormat.html) to use)  
+  Formulas account for operator precedence and allow groups  
+  Valid operators:  
+    - +, -, *, /, mod, ^, log, max, min
+    - 'mod' returns the remainder after division, so 11 mod 3 results in 2 (11 is 3 times 3 with a remainder of 2)
+    - 'max' and 'min' return the max and min value of the values on the left and right, respectively. 1 max 4 would give 4
+
+  You can also use special functions, using &lt;functionname&gt;(&lt;calculation&gt;), like sqrt(4):  
+    - sqrt, square, round, floor (round down), ceil (round up), ln, (a)sin, (a)cos, (a)tan, abs, random
+    - 'random(n)' returns a value between 0 inclusively and n exclusively (with digits!)
+
+  e.g.:  
+
+```YAML
+Formulas:
+  sometext: '(%player_health% + 3) * 5'
+    somesection:
+      format: '\u0023'
+      value: '(%player_health% - 5) / 3'
+```
+
+- #### Sql-Queries ####
+  Section  
+  \------------------------------  
+  A section containing several sql queries for use in placeholders  
+  Use 'Refresh-Delay' here to specify the delay in seconds between automatic refreshes  
+  For each other key, you can use a section with these options:  
+    - **Database:** The id (key) of the database as specified in [Databases](#user-content-databases)
+    - **Query:** The SQL query to perform (e.g. select). This supports placeholders
+    - **Default:** The value to use when the query has not yet been (successfully) refreshed
+    - **Lifespan:** The amount of times a query result can be used before it is discarded and Default is used again until the next refresh
+    - **Request-On-Join:** If this is set to 'true', the query will be refreshed when the player joins
+    - **Auto-Refresh:** If this is set to 'true', this query will be refreshed for all online players as per Refresh-Delay
+    - **Script:**
+      A string (or string list) that processes the result of the query.  
+      You can use 'sql', which is a [ResultSet](http://docs.oracle.com/javase/7/docs/api/java/sql/ResultSet.html)  
+      Example usage with query 'SELECT `Coins` FROM `Sometable` WHERE `UUID`='%player_uuid%' ':  
+      **Script:** '<font style="background: #DDD;">sql.next() ? sql.getInt("Coins") : 0;</font>'  
+      Note that the last line must return a value, but not start with 'return'  
+
+

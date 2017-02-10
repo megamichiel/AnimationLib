@@ -20,7 +20,7 @@ public interface AnimLib<E> extends LoggerNagger, PipelineContext {
      *
      * @param resource the id of the resource
      * @return the latest version
-     * @throws IOException if it can't connect
+     * @throws IOException if it can't connect ofc
      */
     static String getVersion(int resource) throws IOException {
         HttpURLConnection con = (HttpURLConnection) new URL(

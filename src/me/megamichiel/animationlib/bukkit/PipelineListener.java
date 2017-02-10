@@ -18,9 +18,8 @@ public class PipelineListener<E extends Event>
             m.setAccessible(true);
             return (HandlerList) m.invoke(null);
         } catch (Exception ex) {
-            Class<?> parent = c.getSuperclass();
             try {
-                return getHandlerList(parent.asSubclass(Event.class));
+                return getHandlerList(c.getSuperclass().asSubclass(Event.class));
             } catch (ClassCastException ex2) {
                 return null;
             }
@@ -46,8 +45,9 @@ public class PipelineListener<E extends Event>
 
     private PipelineListener(Class<E> type, EventPriority priority, Plugin plugin) {
         HandlerList handlers = getHandlerList(type);
-        if (handlers == null)
+        if (handlers == null) {
             throw new IllegalArgumentException(type.getName() + " has no getHandlerList() method!");
+        }
         this.handlers = handlers;
         this.type = type;
         this.plugin = plugin;
@@ -57,7 +57,9 @@ public class PipelineListener<E extends Event>
 
     @Override
     public void execute(Listener listener, Event event) throws EventException {
-        if (type.isInstance(event)) head.accept(type.cast(event));
+        if (type.isInstance(event)) {
+            head.accept(type.cast(event));
+        }
     }
 
     @Override

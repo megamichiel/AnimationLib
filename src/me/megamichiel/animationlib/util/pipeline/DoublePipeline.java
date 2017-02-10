@@ -1,24 +1,16 @@
 package me.megamichiel.animationlib.util.pipeline;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.*;
 
-public class DoublePipeline {
+public class DoublePipeline extends AbstractPipeline<DoublePredicate> {
 
-    private final PipelineContext ctx;
-    private final List<DoublePredicate> values = new ArrayList<>();
-
-    DoublePipeline(PipelineContext ctx) {
-        this.ctx = ctx;
+    public DoublePipeline(PipelineContext ctx) {
+        super(ctx);
     }
 
     public void accept(double d) {
-        for (Iterator<DoublePredicate> it = values.iterator(); it.hasNext();)
-            if (it.next().test(d))
-                it.remove();
+        _accept(p -> p.test(d));
     }
 
     public DoublePipeline filter(DoublePredicate predicate) {
@@ -69,7 +61,7 @@ public class DoublePipeline {
 
     public DoublePipeline acceptWhile(BooleanSupplier supplier) {
         DoublePipeline pipeline = new DoublePipeline(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) {
                 pipeline.accept(e);
                 return false;
@@ -81,7 +73,7 @@ public class DoublePipeline {
 
     public DoublePipeline acceptUntil(BooleanSupplier supplier) {
         DoublePipeline pipeline = new DoublePipeline(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) return true;
             pipeline.accept(e);
             return false;
@@ -99,7 +91,7 @@ public class DoublePipeline {
 
     public DoublePipeline skipUntil(BooleanSupplier supplier) {
         DoublePipeline pipeline = new DoublePipeline(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) {
                 forEach(pipeline::accept);
                 return true;
@@ -115,7 +107,7 @@ public class DoublePipeline {
 
     public DoublePipeline skipWhile(BooleanSupplier supplier) {
         DoublePipeline pipeline = new DoublePipeline(ctx);
-        values.add(e -> {
+        add(e -> {
             if (supplier.getAsBoolean()) return false;
             forEach(pipeline::accept);
             return true;
@@ -145,7 +137,7 @@ public class DoublePipeline {
     }
     
     public void forEach(DoubleConsumer action) {
-        values.add(d -> {
+        add(d -> {
             action.accept(d);
             return false;
         });
@@ -165,9 +157,5 @@ public class DoublePipeline {
     
     public Pipeline<Double> boxed() {
         return mapToObj(Double::new);
-    }
-
-    public void unregister() {
-        ctx.onClose();
     }
 }

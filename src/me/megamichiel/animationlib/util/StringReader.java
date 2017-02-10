@@ -1,13 +1,16 @@
 package me.megamichiel.animationlib.util;
 
+import java.util.Arrays;
+
 public class StringReader {
 
     private final String source;
+    private final char[] chars;
     private final int count;
     private int index = 0;
 
     public StringReader(String source) {
-        count = (this.source = source).length();
+        count = (chars = (this.source = source).toCharArray()).length;
     }
 
     public int available() {
@@ -19,11 +22,11 @@ public class StringReader {
     }
 
     public char readChar() {
-        return source.charAt(index++);
+        return chars[index++];
     }
 
     public char peekChar() {
-        return source.charAt(index);
+        return chars[index];
     }
 
     public void skip(int i) {
@@ -31,7 +34,7 @@ public class StringReader {
     }
 
     public void skipChar() {
-        if (index < count) index++;
+        if (index < count) ++index;
     }
 
     public void unread(int count) {
@@ -39,23 +42,21 @@ public class StringReader {
     }
 
     public void unreadChar() {
-        if (index > 0) index--;
+        if (index > 0) --index;
     }
 
     public char[] readChars(int count) {
-        char[] c = new char[count];
-        for (int i = 0; i < c.length; i++) c[i] = readChar();
-        return c;
+        return Arrays.copyOfRange(chars, index, index += count);
     }
 
     public String readString(int length) {
-        return new String(readChars(length));
+        return source.substring(index, index += length);
     }
 
     public void skipWhitespace() {
         while (index < count) {
-            char c = source.charAt(index);
-            if (c == ' ' || c == '\t') index++;
+            char c = chars[index];
+            if (c == ' ' || c == '\t') ++index;
             else break;
         }
     }

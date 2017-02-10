@@ -13,7 +13,6 @@
   },
   "config": [
     {
-      "title": "Features",
       "values": [
         {
           "name": "Auto-Download-Placeholders",
@@ -27,12 +26,12 @@
             "NOTE: If you're using a MySQL database, make sure the url starts with 'jdbc:mysql://'",
             "e.g.:",
             [
-              "===PLAIN===",
-              "*Databases:*",
-              ">1>*example:*",
-              ">2>*url:* 'jdbc:mysql://localhost/test'",
-              ">2>*user:* 'host'",
-              ">2>*password:* ''"
+              "===CODE YAML===",
+              "Databases:",
+              "  example:",
+              "    url: 'jdbc:mysql://localhost/test'",
+              "    user: 'host'",
+              "    password: ''"
             ],
             "You can use this for #Sql-Queries or with AnimatedMenu Plus's sql statements"
           ]
@@ -68,12 +67,12 @@
             ],
             "e.g.:",
             [
-              "===PLAIN===",
-              "*Formulas:*",
-              ">1>*sometext:* '(%player_health% + 3) * 5'",
-              ">1>*somesection:*",
-              ">2>*format:* '\\u0023'",
-              ">2>*value:* '(%player_health% - 5) / 3'"
+              "===CODE YAML===",
+              "Formulas:",
+              "  sometext: '(%player_health% + 3) * 5'",
+              "    somesection:",
+              "      format: '\\u0023'",
+              "      value: '(%player_health% - 5) / 3'"
             ]
           ]
         }, {
