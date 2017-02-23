@@ -6,6 +6,7 @@ import org.bukkit.inventory.ItemStack;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -21,47 +22,58 @@ public class NBTUtil {
     }
 
     public final Object TRUE, FALSE;
+    private final Object[] emptyArray = new Object[0];
 
     private final Class<? extends ItemStack> itemClass;
     private final Constructor<? extends ItemStack> itemConstructor;
     private final Field handleField, tagField, mapField, listField;
-    private final Constructor<?> tagConstructor;
+    private final Constructor<?> tagConstructor, listConstructor;
     private final Map<Class<?>, Modifier<?>> modifiers = new HashMap<>(),
                                              resolved  = new HashMap<>();
     private final String nbtPath;
 
+    private final Method parseMethod;
+
     {
-        Class<? extends ItemStack> klass;
-        Constructor<? extends ItemStack> cnst;
-        Field f0, f1, f2, f3;
-        Constructor<?> tag;
-        String pack;
+        Class<? extends ItemStack> itemClass;
+        Constructor<? extends ItemStack> itemConstructor;
+        Field handleField, tagField, mapField, listField;
+        Constructor<?> tagConstructor, listConstructor;
+        String nbtPath;
+        Method parseMethod;
         try {
-            klass = Class.forName(Bukkit.getServer().getClass().getPackage().getName()
+            itemClass = Class.forName(Bukkit.getServer().getClass().getPackage().getName()
                             + ".inventory.CraftItemStack").asSubclass(ItemStack.class);
-            (cnst = klass.getDeclaredConstructor(ItemStack.class)).setAccessible(true);
-            (f0 = klass.getDeclaredField("handle")).setAccessible(true);
-            (f1 = f0.getType().getDeclaredField("tag")).setAccessible(true);
-            (f2 = f1.getType().getDeclaredField("map")).setAccessible(true);
-            tag = f1.getType().getConstructor();
-            pack = f1.getType().getName().replace("Compound", "");
-            Class<?> list = Class.forName(f1.getType().getName().replace("Compound", "List"));
-            (f3 = list.getDeclaredField("list")).setAccessible(true);
+            (itemConstructor = itemClass.getDeclaredConstructor(ItemStack.class)).setAccessible(true);
+            (handleField = itemClass.getDeclaredField("handle")).setAccessible(true);
+            (tagField = handleField.getType().getDeclaredField("tag")).setAccessible(true);
+            (mapField = tagField.getType().getDeclaredField("map")).setAccessible(true);
+            tagConstructor = tagField.getType().getConstructor();
+            nbtPath = tagField.getType().getName().replace("Compound", "");
+            Class<?> list = Class.forName(tagField.getType().getName().replace("Compound", "List"));
+            listConstructor = list.getConstructor();
+            (listField = list.getDeclaredField("list")).setAccessible(true);
+
+            parseMethod = Class.forName(list.getPackage().getName() + ".MojangsonParser").getDeclaredMethod("parse", String.class);
         } catch (Exception ex) {
             System.err.println("[AnimatedMenu] Couldn't find itemstack handle, no nbt support ;c");
-            klass = null;
-            tag = cnst = null;
-            f0 = f1 = f2 = f3 = null;
-            pack = null;
+            itemClass = null;
+            tagConstructor = listConstructor = itemConstructor = null;
+            handleField = tagField = mapField = listField = null;
+            nbtPath = null;
+            parseMethod = null;
         }
-        itemClass = klass;
-        itemConstructor = cnst;
-        handleField = f0;
-        tagField = f1;
-        mapField = f2;
-        listField = f3;
-        tagConstructor = tag;
-        nbtPath = pack;
+        this.itemClass = itemClass;
+        this.itemConstructor = itemConstructor;
+        this.handleField = handleField;
+        this.tagField = tagField;
+        this.mapField = mapField;
+        this.listField = listField;
+        this.tagConstructor = tagConstructor;
+        this.listConstructor = listConstructor;
+        this.nbtPath = nbtPath;
+
+        this.parseMethod = parseMethod;
 
         Modifier<Boolean> mod = modifier(Boolean.class);
         TRUE = mod.wrap(true);
@@ -73,26 +85,46 @@ public class NBTUtil {
     }
 
     public ItemStack asNMS(ItemStack base) {
-        if (itemConstructor != null && !itemClass.isInstance(base)) try {
-            return itemConstructor.newInstance(base);
-        } catch (Exception ex) {
-            // Don't mind
+        if (itemConstructor != null && !itemClass.isInstance(base)) {
+            try {
+                return itemConstructor.newInstance(base);
+            } catch (Exception ex) {
+                // Don't mind
+            }
         }
         return base;
     }
 
     public ItemStack setTag(ItemStack stack, Object tag) throws IllegalStateException {
-        if (isSupported(stack = asNMS(stack))) try {
-            tagField.set(handleField.get(stack), tag);
-        } catch (IllegalAccessException ex) {
-            throw new IllegalStateException(ex);
+        if (isSupported(stack = asNMS(stack))) {
+            try {
+                tagField.set(handleField.get(stack), tag);
+            } catch (IllegalAccessException ex) {
+                throw new IllegalStateException(ex);
+            }
         }
         return stack;
     }
 
+    public Object parse(String text) {
+        try {
+            return parseMethod.invoke(null, text);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
     public Object createTag() {
         try {
-            return tagConstructor.newInstance();
+            return tagConstructor.newInstance(emptyArray);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    public Object createList() {
+        try {
+            return listConstructor.newInstance(emptyArray);
         } catch (Exception ex) {
             return null;
         }
@@ -106,7 +138,7 @@ public class NBTUtil {
         try {
             Object handle = handleField.get(stack);
             Object tag = tagField.get(handle);
-            if (tag == null) tagField.set(handle, tag = tagConstructor.newInstance());
+            if (tag == null) tagField.set(handle, tag = tagConstructor.newInstance(emptyArray));
             return tag;
         } catch (Exception ex) {
             throw new IllegalStateException(ex);
@@ -116,6 +148,14 @@ public class NBTUtil {
     public Map<String, Object> getMap(Object tag) throws IllegalStateException {
         try {
             return (Map<String, Object>) mapField.get(tag);
+        } catch (IllegalAccessException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    public List<Object> getList(Object list) throws IllegalStateException {
+        try {
+            return (List<Object>) listField.get(list);
         } catch (IllegalAccessException ex) {
             throw new IllegalStateException(ex);
         }
@@ -206,9 +246,9 @@ public class NBTUtil {
             data = List.class;
             converter = (tag, value) -> {
                 try {
-                    if (value instanceof Collection)
+                    if (value instanceof Collection) {
                         ((List) listField.get(tag)).addAll((Collection) value);
-                    else {
+                    } else {
                         List list = (List) listField.get(tag);
                         ((Iterable) value).forEach(list::add);
                     }
@@ -235,6 +275,7 @@ public class NBTUtil {
 
     public class Modifier<T> {
 
+        final Class<?> type;
         final Constructor<?> wrapper;
         final Field data;
         final BiConsumer<Object, Object> converter;
@@ -242,13 +283,15 @@ public class NBTUtil {
 
         Modifier(Class<?> nms, Class<?> type, BiConsumer<Object, Object> converter,
                  Function<Object, Object> unwrapper) throws NoSuchElementException {
+            this.type = nms;
             this.converter = converter;
             this.unwrapper = unwrapper;
 
             Class<?> search = type;
             try {
-                if (type.getPackage().getName().equals("java.lang"))
+                if (type.getPackage().getName().equals("java.lang")) {
                     search = (Class<?>) type.getDeclaredField("TYPE").get(null);
+                }
             } catch (Exception ex) {
                 // No primitive wrapper
             }
@@ -268,10 +311,18 @@ public class NBTUtil {
             throw new NoSuchElementException("No data field found for " + type + "!");
         }
 
+        public List<T> unwrapList(List<?> list) throws IllegalStateException {
+            return list.stream().filter(this::isInstance).map(this::unwrap).collect(Collectors.toList());
+        }
+
+        public List<?> wrapList(List<T> list) throws IllegalStateException {
+            return list.stream().map(this::wrap).collect(Collectors.toList());
+        }
+
         public Object wrap(T value) throws IllegalStateException {
             try {
                 if (converter != null) {
-                    Object o = wrapper.newInstance();
+                    Object o = wrapper.newInstance(emptyArray);
                     converter.accept(o, value);
                     return o;
                 }
@@ -291,7 +342,7 @@ public class NBTUtil {
 
         public boolean isInstance(Object value) {
             try {
-                return wrapper.getDeclaringClass().isInstance(value);
+                return type.isInstance(value);
             } catch (Exception ex) {
                 return false;
             }

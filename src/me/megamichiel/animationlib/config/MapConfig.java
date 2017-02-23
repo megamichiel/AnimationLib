@@ -235,7 +235,8 @@ public class MapConfig extends AbstractConfig implements Serializable {
     }
 
     public <T> void deserialize(ConfigDeserializer<T> deserializer, T val) {
-        parent.putAll(mapValues(deserializer.deserialize(val)));
+        Map map = deserializer.deserialize(val);
+        if (map != null) parent.putAll(mapValues(map));
     }
 
     public String saveToString() {

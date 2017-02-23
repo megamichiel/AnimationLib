@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 @SuppressWarnings({"deprecation", "unused", "WeakerAccess"})
 public class ItemTag {
 
+    private static final NBTUtil.Modifier<String> STRING_MODIFIER = NBTUtil.getInstance().modifier(String.class);
+
     private final NBTTag tag;
 
     public ItemTag() {
@@ -67,9 +69,7 @@ public class ItemTag {
         if (display == null) return new Display();
         String name = display.getString("Name");
         NBTList loreList = display.getList("Lore");
-        NBTUtil.Modifier<String> modifier = NBTUtil.getInstance().modifier(String.class);
-        List<String> lore = loreList == null ? null : loreList.getList().stream()
-                .filter(modifier::isInstance).map(modifier::unwrap).collect(Collectors.toList());
+        List<String> lore = loreList == null ? null : STRING_MODIFIER.unwrapList(loreList.getList());
         Color color = display.contains("color") ? Color.fromRGB(display.getInt("color")) : null;
         return new Display(name, lore, color);
     }
@@ -81,8 +81,7 @@ public class ItemTag {
         }
         NBTTag tag = this.tag.getOrCreateTag("display");
         tag.set("Name", display.getName());
-        NBTUtil.Modifier<String> mod = NBTUtil.getInstance().modifier(String.class);
-        tag.set("Lore", display.hasLore() ? display.getLore().stream().map(mod::wrap).collect(Collectors.toList()) : null);
+        tag.set("Lore", display.hasLore() ? STRING_MODIFIER.wrapList(display.getLore()) : null);
         tag.set("color", display.hasColor() ? display.getColor().asRGB() : null);
     }
 
@@ -222,27 +221,23 @@ public class ItemTag {
     public Set<String> getCanDestroy() {
         NBTList list = tag.getList("CanDestroy");
         if (list == null) return Collections.emptySet();
-        NBTUtil.Modifier<String> mod = NBTUtil.getInstance().modifier(String.class);
-        return list.getList().stream().filter(mod::isInstance)
-                .map(mod::unwrap).collect(Collectors.toSet());
+        return list.getList().stream().filter(STRING_MODIFIER::isInstance)
+                .map(STRING_MODIFIER::unwrap).collect(Collectors.toSet());
     }
 
     public void setCanDestroy(Set<String> canDestroy) {
-        NBTUtil.Modifier<String> mod = NBTUtil.getInstance().modifier(String.class);
-        tag.set("CanDestroy", canDestroy.stream().map(mod::wrap).collect(Collectors.toSet()));
+        tag.set("CanDestroy", canDestroy.stream().map(STRING_MODIFIER::wrap).collect(Collectors.toSet()));
     }
 
     public Set<String> getCanPlaceOn() {
         NBTList list = tag.getList("CanPlaceOn");
         if (list == null) return Collections.emptySet();
-        NBTUtil.Modifier<String> mod = NBTUtil.getInstance().modifier(String.class);
-        return list.getList().stream().filter(mod::isInstance)
-                .map(mod::unwrap).collect(Collectors.toSet());
+        return list.getList().stream().filter(STRING_MODIFIER::isInstance)
+                .map(STRING_MODIFIER::unwrap).collect(Collectors.toSet());
     }
 
     public void setCanPlaceOn(Set<String> canPlaceOn) {
-        NBTUtil.Modifier<String> mod = NBTUtil.getInstance().modifier(String.class);
-        tag.set("CanPlaceOn", canPlaceOn.stream().map(mod::wrap).collect(Collectors.toSet()));
+        tag.set("CanPlaceOn", canPlaceOn.stream().map(STRING_MODIFIER::wrap).collect(Collectors.toSet()));
     }
 
     public EntityType getEntityType() {
