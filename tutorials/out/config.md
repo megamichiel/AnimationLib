@@ -49,7 +49,7 @@ Databases:
 
   You can also use special functions, using &lt;functionname&gt;(&lt;calculation&gt;), like sqrt(4):  
     - sqrt, square, round, floor (round down), ceil (round up), ln, (a)sin, (a)cos, (a)tan, abs, random
-    - 'random(n)' returns a value between 0 inclusively and n exclusively (with digits!)
+    - 'random(n)' returns a value between 0 inclusively and n exclusively (with decimal digits!)
 
   e.g.:  
 

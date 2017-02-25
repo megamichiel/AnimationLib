@@ -1,31 +1,21 @@
 package me.megamichiel.animationlib.bukkit;
 
 import me.megamichiel.animationlib.AnimLib;
-import me.megamichiel.animationlib.bukkit.nbt.ItemTag;
-import me.megamichiel.animationlib.command.CommandInfo;
-import me.megamichiel.animationlib.command.exec.CommandContext;
-import me.megamichiel.animationlib.command.exec.CommandExecutor;
 import me.megamichiel.animationlib.config.ConfigManager;
 import me.megamichiel.animationlib.config.type.YamlConfig;
 import me.megamichiel.animationlib.placeholder.StringBundle;
 import me.megamichiel.animationlib.util.db.DataBase;
 import me.megamichiel.animationlib.util.pipeline.Pipeline;
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 
 import static org.bukkit.ChatColor.*;
 
@@ -75,56 +65,6 @@ public class AnimLibPlugin extends JavaPlugin implements AnimLib<Event> {
         }
 
         loadConfig();
-
-        BukkitCommandAPI.getInstance().registerCommand(this, new CommandInfo("items", new CommandExecutor() {
-
-            private void bukkitAPI(Player player) {
-                ItemStack item = new ItemStack(Material.DIAMOND_SWORD);
-                ItemMeta meta = item.getItemMeta();
-                meta.setDisplayName(ChatColor.GREEN + "Very diamond!1!");
-                meta.setLore(Arrays.asList(ChatColor.AQUA + "Fabulous lore", ChatColor.RED + "Red line"));
-                meta.addEnchant(Enchantment.DAMAGE_ALL, 3, false);
-                item.setItemMeta(meta);
-                player.getInventory().setItem(2, item);
-            }
-
-            private void reflectNMS(Player player) {
-                ItemTag item = new ItemTag();
-                item.setDisplay(new ItemTag.Display(ChatColor.GREEN + "Very diamond!1!",
-                        Arrays.asList(ChatColor.AQUA + "Fabulous lore", ChatColor.RED + "Red line")));
-                item.setEnchants(new ItemTag.Ench().set(Enchantment.DAMAGE_ALL, 3));
-                player.getInventory().setItem(2, item.toItemStack(Material.DIAMOND_SWORD));
-            }
-
-            @Override
-            public void onCommand(CommandContext ctx) {
-                Object sender = ctx.getSender();
-                if (!(sender instanceof Player)) {
-                    ctx.sendMessage(ChatColor.RED + "You must be a player for this!");
-                    return;
-                }
-                Player player = (Player) sender;
-                int warmup = 1000, count = 10000;
-                long time;
-                for (int i = 0; i < warmup; i++) {
-                    bukkitAPI(player);
-                }
-                time = System.currentTimeMillis();
-                for (int i = 0; i < count; i++) {
-                    bukkitAPI(player);
-                }
-                player.sendMessage("Bukkit API: " + (System.currentTimeMillis() - time));
-
-                for (int i = 0; i < warmup; i++) {
-                    reflectNMS(player);
-                }
-                time = System.currentTimeMillis();
-                for (int i = 0; i < count; i++) {
-                    reflectNMS(player);
-                }
-                player.sendMessage("Reflect NMS: " + (System.currentTimeMillis() - time));
-            }
-        }));
     }
 
     private void loadConfig() {

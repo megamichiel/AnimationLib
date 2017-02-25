@@ -95,10 +95,11 @@ public class AnimLibPlaceholders extends PlaceholderHook {
         if (arg.startsWith("formula_")) {
             IPlaceholder<String> formula = formulas.get(arg.substring(8));
             return formula == null ? null : formula.invoke(plugin, player);
-        } else if (arg.startsWith("sql_"))
+        } else if (arg.startsWith("sql_")) {
             return sql.get(arg.substring(4), player);
-        else if (arg.startsWith("sqlrefresh_"))
+        } else if (arg.startsWith("sqlrefresh_")) {
             return sql.getAndRefresh(arg.substring(11), player);
+        }
         return null;
     }
 }
