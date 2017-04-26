@@ -18,8 +18,6 @@ import java.util.stream.Collectors;
 @SuppressWarnings({"deprecation", "unused", "WeakerAccess"})
 public class ItemTag {
 
-    private static final NBTUtil.Modifier<String> STRING_MODIFIER = NBTUtil.getInstance().modifier(String.class);
-
     private final NBTTag tag;
 
     public ItemTag() {
@@ -41,10 +39,7 @@ public class ItemTag {
     }
 
     public ItemStack toItemStack(ItemStack base) {
-        NBTUtil nbt = NBTUtil.getInstance();
-        base = nbt.asNMS(base);
-        nbt.setTag(base, tag.getHandle());
-        return base;
+        return NBTUtil.getInstance().setTag(base, tag.getHandle());
     }
 
     public ItemStack toItemStack(Material type) {
@@ -69,7 +64,7 @@ public class ItemTag {
         if (display == null) return new Display();
         String name = display.getString("Name");
         NBTList loreList = display.getList("Lore");
-        List<String> lore = loreList == null ? null : STRING_MODIFIER.unwrapList(loreList.getList());
+        List<String> lore = loreList == null ? null : NBTModifiers.STRING.unwrapList(loreList.getList());
         Color color = display.contains("color") ? Color.fromRGB(display.getInt("color")) : null;
         return new Display(name, lore, color);
     }
@@ -81,7 +76,7 @@ public class ItemTag {
         }
         NBTTag tag = this.tag.getOrCreateTag("display");
         tag.set("Name", display.getName());
-        tag.set("Lore", display.hasLore() ? STRING_MODIFIER.wrapList(display.getLore()) : null);
+        tag.set("Lore", display.hasLore() ? NBTModifiers.STRING.wrapList(display.getLore()) : null);
         tag.set("color", display.hasColor() ? display.getColor().asRGB() : null);
     }
 
@@ -221,23 +216,23 @@ public class ItemTag {
     public Set<String> getCanDestroy() {
         NBTList list = tag.getList("CanDestroy");
         if (list == null) return Collections.emptySet();
-        return list.getList().stream().filter(STRING_MODIFIER::isInstance)
-                .map(STRING_MODIFIER::unwrap).collect(Collectors.toSet());
+        return list.getList().stream().filter(NBTModifiers.STRING::isInstance)
+                .map(NBTModifiers.STRING::unwrap).collect(Collectors.toSet());
     }
 
     public void setCanDestroy(Set<String> canDestroy) {
-        tag.set("CanDestroy", canDestroy.stream().map(STRING_MODIFIER::wrap).collect(Collectors.toSet()));
+        tag.set("CanDestroy", canDestroy.stream().map(NBTModifiers.STRING::wrap).collect(Collectors.toSet()));
     }
 
     public Set<String> getCanPlaceOn() {
         NBTList list = tag.getList("CanPlaceOn");
         if (list == null) return Collections.emptySet();
-        return list.getList().stream().filter(STRING_MODIFIER::isInstance)
-                .map(STRING_MODIFIER::unwrap).collect(Collectors.toSet());
+        return list.getList().stream().filter(NBTModifiers.STRING::isInstance)
+                .map(NBTModifiers.STRING::unwrap).collect(Collectors.toSet());
     }
 
     public void setCanPlaceOn(Set<String> canPlaceOn) {
-        tag.set("CanPlaceOn", canPlaceOn.stream().map(STRING_MODIFIER::wrap).collect(Collectors.toSet()));
+        tag.set("CanPlaceOn", canPlaceOn.stream().map(NBTModifiers.STRING::wrap).collect(Collectors.toSet()));
     }
 
     public EntityType getEntityType() {

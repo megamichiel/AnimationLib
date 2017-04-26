@@ -224,9 +224,8 @@ public class ReflectCommandExecutor implements CommandExecutor {
             StringBuilder sb = new StringBuilder('/' + label);
             boolean optional;
             for (Argument arg : arguments) {
-                sb.append((optional = arg.isOptional(sender)) ? '[' : '<');
-                sb.append(arg.alias);
-                sb.append(optional ? ']' : '>');
+                sb.append((optional = arg.isOptional(sender)) ? " [" : " <")
+                        .append(arg.alias).append(optional ? ']' : '>');
             }
             return sb.toString();
         }

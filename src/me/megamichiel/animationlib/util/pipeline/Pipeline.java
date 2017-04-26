@@ -90,10 +90,10 @@ public class Pipeline<E> extends AbstractPipeline<Predicate<? super E>> {
         return pipeline;
     }
     
-    public Pipeline<E> acceptWhile(BooleanSupplier supplier) {
+    public Pipeline<E> acceptWhile(Predicate<E> predicate) {
         Pipeline<E> pipeline = new Pipeline<>(ctx);
         add(e -> {
-            if (supplier.getAsBoolean()) {
+            if (predicate.test(e)) {
                 pipeline.accept(e);
                 return false;
             }
@@ -102,10 +102,10 @@ public class Pipeline<E> extends AbstractPipeline<Predicate<? super E>> {
         return pipeline;
     }
 
-    public Pipeline<E> acceptUntil(BooleanSupplier supplier) {
+    public Pipeline<E> acceptUntil(Predicate<E> predicate) {
         Pipeline<E> pipeline = new Pipeline<>(ctx);
         add(e -> {
-            if (supplier.getAsBoolean()) return true;
+            if (predicate.test(e)) return true;
             pipeline.accept(e);
             return false;
         });
@@ -113,17 +113,17 @@ public class Pipeline<E> extends AbstractPipeline<Predicate<? super E>> {
     }
 
     public Pipeline<E> acceptWhileBefore(long time) {
-        return acceptWhile(() -> System.currentTimeMillis() < time);
+        return acceptWhile(e -> System.currentTimeMillis() < time);
     }
 
     public Pipeline<E> acceptUntil(long time) {
-        return acceptUntil(() -> System.currentTimeMillis() >= time);
+        return acceptUntil(e -> System.currentTimeMillis() >= time);
     }
 
-    public Pipeline<E> skipUntil(BooleanSupplier supplier) {
+    public Pipeline<E> skipUntil(Predicate<E> predicate) {
         Pipeline<E> pipeline = new Pipeline<>(ctx);
         add(e -> {
-            if (supplier.getAsBoolean()) {
+            if (predicate.test(e)) {
                 forEach(pipeline::accept);
                 return true;
             }
@@ -133,13 +133,13 @@ public class Pipeline<E> extends AbstractPipeline<Predicate<? super E>> {
     }
 
     public Pipeline<E> skipUntil(long time) {
-        return skipUntil(() -> System.currentTimeMillis() >= time);
+        return skipUntil(e -> System.currentTimeMillis() >= time);
     }
 
-    public Pipeline<E> skipWhile(BooleanSupplier supplier) {
+    public Pipeline<E> skipWhile(Predicate<E> predicate) {
         Pipeline<E> pipeline = new Pipeline<>(ctx);
         add(e -> {
-            if (supplier.getAsBoolean()) return false;
+            if (predicate.test(e)) return false;
             forEach(pipeline::accept);
             return true;
         });
@@ -148,12 +148,12 @@ public class Pipeline<E> extends AbstractPipeline<Predicate<? super E>> {
     
     public Pipeline<E> limit(long maxSize) {
         AtomicLong l = new AtomicLong(maxSize);
-        return acceptUntil(() -> l.decrementAndGet() < 0);
+        return acceptUntil(e -> l.decrementAndGet() < 0);
     }
     
     public Pipeline<E> skip(long n) {
         AtomicLong l = new AtomicLong(n);
-        return skipUntil(() -> l.decrementAndGet() < 0);
+        return skipUntil(e -> l.decrementAndGet() < 0);
     }
 
     public Pipeline<E> post(boolean async) {

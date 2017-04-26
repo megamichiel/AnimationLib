@@ -30,9 +30,14 @@ public class Formula implements CtxPlaceholder<String> {
         if (o instanceof Formula) return ((Formula) o).compute(nagger, who, ctx);
         if (o instanceof IPlaceholder) {
             Object val = ((IPlaceholder) o).invoke(nagger, who, ctx);
-            if (val instanceof Number)
+            if (val instanceof Number) {
                 return ((Number) val).doubleValue();
-            return Double.parseDouble(val.toString());
+            }
+            try {
+                return Double.parseDouble(val.toString());
+            } catch (NumberFormatException ex) {
+                return 0;
+            }
         }
         if (o instanceof UnaryFunction) return ((UnaryFunction) o).compute(nagger, who, ctx);
         throw new IllegalArgumentException("Unknown object: " + o);

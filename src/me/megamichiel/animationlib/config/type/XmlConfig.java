@@ -86,7 +86,7 @@ public class XmlConfig extends MapConfig {
     }
 
     @Override
-    public XmlConfig loadFromString(String dump) {
+    public void loadFromString(String dump) {
         super.loadFromString(dump);
 
         try {
@@ -111,8 +111,6 @@ public class XmlConfig extends MapConfig {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        return this;
     }
 
     private Object load(Element node) {

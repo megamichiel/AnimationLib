@@ -35,9 +35,8 @@ public class YamlConfig extends MapConfig {
     }
 
     @Override
-    public YamlConfig loadFromString(String dump) {
+    public void loadFromString(String dump) {
         super.loadFromString(dump);
         deserialize(s -> yaml.loadAs(s, Map.class), dump);
-        return this;
     }
 }

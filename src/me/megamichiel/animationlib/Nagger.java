@@ -27,6 +27,16 @@ public interface Nagger {
     void nag(String message);
 
     /**
+     * Reports a message using the given format
+     *
+     * @param format The format of the text
+     * @param args The arguments to use in the text
+     */
+    default void nag(String format, Object... args) {
+        nag(String.format(format, args));
+    }
+
+    /**
      * Reports a Throwable
      *
      * @param throwable the throwable to report

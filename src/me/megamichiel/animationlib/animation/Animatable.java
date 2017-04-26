@@ -4,6 +4,9 @@ import me.megamichiel.animationlib.Nagger;
 import me.megamichiel.animationlib.config.AbstractConfig;
 
 import java.util.*;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A class that moves through multiple values using 'frames'
@@ -11,6 +14,24 @@ import java.util.*;
  * @param <E> the type of this animatable
  */
 public abstract class Animatable<E> extends ArrayList<E> {
+
+    public static <E> Animatable<E> of(E def, BiFunction<Nagger, String, E> func) {
+        return new Animatable<E>() {
+            @Override
+            protected E convert(Nagger nagger, Object o) {
+                return func.apply(nagger, o.toString());
+            }
+
+            @Override
+            protected E defaultValue() {
+                return def;
+            }
+        };
+    }
+
+    public static List<Animatable<?>> filterAnimated(Animatable<?>... animatables) {
+        return Stream.of(animatables).filter(Animatable::isAnimated).collect(Collectors.toList());
+    }
     
     private static final long serialVersionUID = -7324365301382371283L;
     private static final Random random = new Random();
@@ -185,7 +206,8 @@ public abstract class Animatable<E> extends ArrayList<E> {
         }
         Object value = getValue(nagger, section, key);
         if (value != null) {
-            add(convert(nagger, value));
+            E converted = convert(nagger, value);
+            if (converted != null) add(converted);
             return true;
         }
         return false;

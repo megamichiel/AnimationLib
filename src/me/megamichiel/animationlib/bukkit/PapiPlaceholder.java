@@ -16,9 +16,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 import java.io.File;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -82,13 +79,24 @@ public class PapiPlaceholder implements IPlaceholder<String> {
         return ctx != null ? ctx.invoke(who, identifier, this) : invoke(nagger, who);
     }
 
+    private PlaceholderHook get() {
+        PlaceholderHook hook = handle.get();
+        if (hook != null) return hook;
+        try {
+            hook = PlaceholderAPI.getPlaceholders().get(plugin);
+            if (hook != null) {
+                handle = new WeakReference<>(hook);
+            }
+            return hook;
+        } catch (NullPointerException ex) { // getPlaceholders() can cause this
+            return null;
+        }
+    }
+
     @Override
     public String invoke(Nagger nagger, Object who) {
         if (!apiAvailable) return toString();
-        PlaceholderHook hook = handle.get();
-        if (hook == null && (hook = PlaceholderAPI.getPlaceholders().get(plugin)) != null) {
-            handle = new WeakReference<>(hook);
-        }
+        PlaceholderHook hook = get();
         if (hook != null) {
             String str = hook.onPlaceholderRequest((Player) who, name);
             return str != null ? str : "<invalid_argument>";

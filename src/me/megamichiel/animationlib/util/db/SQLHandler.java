@@ -72,11 +72,17 @@ public class SQLHandler implements Runnable {
     public void awaitRefresh(Object player, List<Entry> entries,
                              Runnable onComplete) {
         lib.post(() -> {
-            if (player != null) for (Entry entry : entries)
-                entry.refresh(player);
-            else entries.forEach(Entry::refresh);
+            refresh(player, entries);
             lib.post(onComplete, false);
         }, true);
+    }
+
+    public void refresh(Object player, List<Entry> entries) {
+        if (player != null) {
+            for (Entry entry : entries) {
+                entry.refresh(player);
+            }
+        } else entries.forEach(Entry::refresh);
     }
 
     public String get(String key, Object player) {
@@ -141,7 +147,7 @@ public class SQLHandler implements Runnable {
             }
         }
 
-        void refresh() {
+        public void refresh() {
             try {
                 Connection con = db.getConnection();
                 try (Statement sm = con.createStatement()) {
@@ -163,7 +169,7 @@ public class SQLHandler implements Runnable {
             }
         }
 
-        void refresh(Object player) {
+        public boolean refresh(Object player) {
             try {
                 Connection con = db.getConnection();
                 try (Statement sm = con.createStatement()) {
@@ -172,6 +178,7 @@ public class SQLHandler implements Runnable {
                         b.put("sql", res);
                         sessions.computeIfAbsent(player, p -> new Session(null, 0))
                                 .update(String.valueOf(script.eval(b)), lifespan);
+                        return true;
                     }
                 }
             } catch (SQLException ex) {
@@ -181,6 +188,7 @@ public class SQLHandler implements Runnable {
                 lib.nag("Error while executing script!");
                 lib.nag(ex);
             }
+            return false;
         }
 
         String get(Object player) {
@@ -199,7 +207,7 @@ public class SQLHandler implements Runnable {
     private static class Session {
 
         private String value;
-        private int  lifespan;
+        private int lifespan;
 
         Session(String value, int lifespan) {
             this.value = value;

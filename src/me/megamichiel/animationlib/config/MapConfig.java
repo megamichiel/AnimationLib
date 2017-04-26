@@ -7,38 +7,28 @@ import java.util.function.Function;
 
 public class MapConfig extends AbstractConfig implements Serializable {
 
-    private static final Function<String, String> TO_LOWER = s -> s.toLowerCase(Locale.US);
+    private static final long serialVersionUID = -2756209354518932499L;
 
     private final Map<String, String> mappedKeys = new HashMap<>();
     private final Map<String, Object> parent;
-    private transient Function<String, String> keyMapper;
-
-    public MapConfig(Map<?, ?> map) {
-        this(map, true);
-    }
-    
-    public MapConfig(Map<?, ?> map, boolean caseInsensitive) {
-        keyMapper = caseInsensitive ? TO_LOWER : Function.identity();
-        parent = mapValues(map);
-    }
+    private boolean caseInsensitive;
 
     @Override
     public String getOriginalKey(String key) {
-        String s = mappedKeys.get(key);
-        return s == null ? key : s;
+        return mappedKeys.getOrDefault(key, key);
     }
 
     @Override
     public void restoreKeys(boolean deep) {
-        keyMapper = Function.identity();
+        caseInsensitive = false;
         super.restoreKeys(deep);
     }
 
     private Object mapValue(Object o) {
-        if (o instanceof Map) return new MapConfig((Map) o);
+        if (o instanceof Map) return new MapConfig((Map) o, caseInsensitive);
         else if (o instanceof Iterable) return mapValues((Iterable) o);
         else if (o instanceof String) {
-            String s = ((String) o).toLowerCase(Locale.US);
+            String s = ((String) o).toLowerCase(Locale.ENGLISH);
             switch (s) {
                 case "true":  return Boolean.TRUE;
                 case "false": return Boolean.FALSE;
@@ -73,8 +63,9 @@ public class MapConfig extends AbstractConfig implements Serializable {
             }
         } else if (o != null && o.getClass().isArray()) {
             List<Object> list = new ArrayList<>();
-            for (int i = 0, length = Array.getLength(o); i < length; i++)
-                list.add(Array.get(o, i));
+            for (int i = 0, length = Array.getLength(o); i < length; i++) {
+                list.add(mapValue(Array.get(o, i)));
+            }
             return mapValues(list);
         }
         return o;
@@ -84,7 +75,7 @@ public class MapConfig extends AbstractConfig implements Serializable {
         Map<String, Object> result = new LinkedHashMap<>();
         for (Map.Entry<?, ?> entry : map.entrySet()) {
             String key = entry.getKey().toString();
-            String mapped = keyMapper.apply(key);
+            String mapped = caseInsensitive ? key.toLowerCase(Locale.ENGLISH) : key;
             mappedKeys.put(mapped, key);
             result.put(mapped, mapValue(entry.getValue()));
         }
@@ -96,7 +87,7 @@ public class MapConfig extends AbstractConfig implements Serializable {
         for (Object o : iterable)
             if (o instanceof Map.Entry) {
                 Map.Entry entry = (Map.Entry) o;
-                MapConfig map = new MapConfig();
+                MapConfig map = new MapConfig(caseInsensitive);
                 map.set(entry.getKey().toString(), entry.getValue());
                 result.add(map);
             } else result.add(mapValue(o));
@@ -109,7 +100,16 @@ public class MapConfig extends AbstractConfig implements Serializable {
 
     public MapConfig(boolean caseInsensitive) {
         parent = new LinkedHashMap<>();
-        keyMapper = caseInsensitive ? TO_LOWER : Function.identity();
+        this.caseInsensitive = caseInsensitive;
+    }
+
+    public MapConfig(Map<?, ?> map) {
+        this(map, true);
+    }
+
+    public MapConfig(Map<?, ?> map, boolean caseInsensitive) {
+        this.caseInsensitive = caseInsensitive;
+        parent = mapValues(map);
     }
 
     @Override
@@ -118,21 +118,23 @@ public class MapConfig extends AbstractConfig implements Serializable {
 
         for (int index; (index = path.indexOf('.')) != -1;) {
             String key = path.substring(0, index),
-                   mapped = target.keyMapper.apply(key);
+                   mapped = target.caseInsensitive ? key.toLowerCase(Locale.ENGLISH) : key;
             Object val = target.parent.get(mapped);
             if (val instanceof MapConfig) target = (MapConfig) val;
             else {
-                target.parent.put(mapped, target = new MapConfig());
+                target.parent.put(mapped, target = new MapConfig(caseInsensitive));
                 target.mappedKeys.put(mapped, key);
             }
             path = path.substring(index + 1);
         }
-        String key = target.keyMapper.apply(path);
-        mappedKeys.put(key, path);
-        if (value == null) {
-            target.parent.remove(key);
+
+        String key = target.caseInsensitive ? path.toLowerCase(Locale.ENGLISH) : path;
+        if (value != null) {
+            target.parent.put(key, mapValue(value));
+            target.mappedKeys.put(key, path);
+        } else if (target.parent.remove(key) != null) {
             target.mappedKeys.remove(key);
-        } else target.parent.put(key, mapValue(value));
+        }
     }
 
     @Override
@@ -243,22 +245,21 @@ public class MapConfig extends AbstractConfig implements Serializable {
         return "";
     }
 
-    public MapConfig loadFromString(String dump) {
+    public void loadFromString(String dump) {
         parent.clear();
-        return this;
     }
 
     @Override
-    public MapConfig loadFromFile(File file) throws IOException {
+    public void loadFromFile(File file) throws IOException {
         FileInputStream stream = new FileInputStream(file);
         BufferedReader br = new BufferedReader(new InputStreamReader(stream));
         StringBuilder sb = new StringBuilder();
         String line;
-        while ((line = br.readLine()) != null)
+        while ((line = br.readLine()) != null) {
             sb.append(line).append('\n');
+        }
         loadFromString(sb.toString());
         stream.close();
-        return this;
     }
 
     @Override
@@ -266,7 +267,7 @@ public class MapConfig extends AbstractConfig implements Serializable {
         FileOutputStream stream = new FileOutputStream(file);
         BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(stream));
         bw.write(saveToString() + '\n');
-        stream.close();
+        bw.close();
     }
 
     @Override
@@ -282,20 +283,6 @@ public class MapConfig extends AbstractConfig implements Serializable {
     @Override
     public int hashCode() {
         return parent.hashCode();
-    }
-
-    private void writeObject(ObjectOutputStream stream) throws IOException {
-        stream.defaultWriteObject();
-        stream.writeBoolean(keyMapper == TO_LOWER); // Case insensitive
-    }
-
-    private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
-        stream.defaultReadObject();
-        keyMapper = stream.readBoolean() ? TO_LOWER : Function.identity();
-    }
-
-    public boolean isSection(String path) {
-        return get(path) instanceof MapConfig;
     }
 
     public interface ConfigSerializer<T> {

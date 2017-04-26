@@ -22,12 +22,12 @@ public class Base64Config extends MapConfig {
     }
 
     @Override
-    public Base64Config loadFromString(String dump) {
+    public void loadFromString(String dump) {
         try {
             byte[] data = Base64.getDecoder().decode(dump);
-            return (Base64Config) new ObjectInputStream(new ByteArrayInputStream(data)).readObject();
+            setAll((Base64Config) new ObjectInputStream(new ByteArrayInputStream(data)).readObject());
         } catch (Exception ex) {
-            return this;
+            // Do not care
         }
     }
 }

@@ -27,6 +27,10 @@ public class ConfigManager<C extends AbstractConfig> {
         return this;
     }
 
+    public File file() {
+        return configFile;
+    }
+
     private void checkState() {
         if (configFile == null)
             throw new IllegalStateException("file(File) has not been called yet!");
@@ -66,8 +70,9 @@ public class ConfigManager<C extends AbstractConfig> {
     public void reloadConfig() {
         checkState();
         try {
-            if (configFile.exists())
+            if (configFile.exists()) {
                 (config = configSupplier.get()).loadFromFile(configFile);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }

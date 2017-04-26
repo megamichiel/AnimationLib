@@ -27,10 +27,9 @@ public class GsonConfig extends MapConfig {
     }
 
     @Override
-    public GsonConfig loadFromString(String gson) {
+    public void loadFromString(String gson) {
         super.loadFromString(gson);
         setAll(this.gson.get().fromJson(gson, HashMap.class));
-        return this;
     }
 
     @Override

@@ -169,7 +169,7 @@ public abstract class AbstractConfig {
 
     public abstract Map<String, Object> toRawMap();
 
-    public abstract AbstractConfig loadFromFile(File file) throws IOException;
+    public abstract void loadFromFile(File file) throws IOException;
 
     public abstract void save(File file) throws IOException;
 

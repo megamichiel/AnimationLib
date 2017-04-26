@@ -6,7 +6,6 @@ import me.megamichiel.animationlib.util.ParsingNagger;
 import me.megamichiel.animationlib.util.StringReader;
 
 import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -387,6 +386,84 @@ public class StringBundle extends ArrayList<Object> implements CtxPlaceholder<St
             }
         }
         if (builder.length() > 0) bundle.add(builder.toString());
+        return bundle;
+    }
+
+    /**
+     * Formats a given string using specific parameters (preferably IPlaceholder implementations).
+     * An example format string: "I {2} you because you are {}!"
+     * The first value will be the second value in the args array
+     * The second value will be the first value in the args array, since it was the first index in the iteration
+     *
+     * @param nagger The nagger that the StringBundle should report to
+     * @param format The String to format
+     * @param args The arguments to be used in the format
+     * @return A newly created StringBundle
+     * @throws IllegalArgumentException if parsing failed due to inproper use of placeholder specifiers
+     * @throws NumberFormatException if a number inside a placeholder specifier could not be parsed
+     * @throws IndexOutOfBoundsException if an index inside a placeholder specifier is outside of the arguments bounds
+     */
+    public static StringBundle format(Nagger nagger, String format, Object... args)
+            throws IllegalArgumentException, IndexOutOfBoundsException {
+        StringReader reader = new StringReader(format);
+        StringBundle bundle = new StringBundle(nagger);
+        StringBuilder builder = new StringBuilder();
+
+        int currentIndex = 0;
+        boolean escape = false;
+        char c;
+        while (reader.isReadable()) {
+            switch (c = reader.readChar()) {
+                case '\\':
+                    if (!(escape = !escape)) { // Escape becomes false, double backslash
+                        builder.append('\\');
+                    }
+                    break;
+                case '{':
+                    if (escape) {
+                        builder.append('{');
+                    } else {
+                        if (builder.length() > 0) {
+                            bundle.add(builder.toString());
+                            builder.setLength(0);
+                        }
+                        c = reader.readChar();
+                        if (c == '}') {
+                            if (currentIndex == args.length) {
+                                throw new IllegalArgumentException("Too few arguments given!");
+                            }
+                            bundle.add(args[currentIndex++]);
+                        } else {
+                            do {
+                                builder.append(c);
+                            } while (reader.isReadable() && (c = reader.readChar()) != '}');
+
+                            if (c != '}') {
+                                throw new IllegalArgumentException("Unexpected end of string");
+                            }
+                            int index;
+                            try {
+                                index = Integer.parseInt(builder.toString());
+                                builder.setLength(0);
+                            } catch (NumberFormatException e) {
+                                throw new NumberFormatException("Expected number, but got " + builder.toString());
+                            }
+                            if (index < 1 || index > args.length) {
+                                throw new IndexOutOfBoundsException("Argument index out of bounds: " + index);
+                            }
+                            bundle.add(args[index - 1]);
+                        }
+                    }
+                    break;
+                default:
+                    builder.append(c);
+            }
+        }
+
+        if (builder.length() > 0) {
+            bundle.add(builder.toString());
+        }
+
         return bundle;
     }
 

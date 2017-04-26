@@ -6,11 +6,21 @@ import java.util.function.Function;
 
 public class DynamicSwitch<T> implements Function<T, Object> {
 
+    @SafeVarargs
+    public static <T> DynamicSwitch<T> of(ReturningExecutor def, Case<? extends T>... cases) {
+        return new DynamicSwitch<>(def, cases);
+    }
+
+    @SafeVarargs
+    public static <T> DynamicSwitch<T> of(Case<? extends T>... cases) {
+        return new DynamicSwitch<>(null, cases);
+    }
+
     private final ReturningExecutor def;
     private final Case<? extends T>[] cases;
 
     @SafeVarargs
-    public DynamicSwitch(ReturningExecutor def, Case<? extends T>... cases) {
+    private DynamicSwitch(ReturningExecutor def, Case<? extends T>... cases) {
         this.def = def == null ? () -> null : def;
         this.cases = cases;
     }
@@ -20,9 +30,9 @@ public class DynamicSwitch<T> implements Function<T, Object> {
         return apply(value, null);
     }
 
-    public Object apply(T value, Consumer<? super Exception> errorHandler) {
+    public Object apply(T value, Consumer<? super Exception> exceptionHandler) {
         try {
-            for (int i = 0; i < cases.length; i++)
+            for (int i = 0; i < cases.length; i++) {
                 if (cases[i].test(value)) {
                     for (; i < cases.length; i++) {
                         Result result = cases[i].executor.call();
@@ -31,21 +41,12 @@ public class DynamicSwitch<T> implements Function<T, Object> {
                     }
                     return def.execute();
                 }
+            }
             return def.execute();
         } catch (Exception thrown) {
-            if (errorHandler != null) errorHandler.accept(thrown);
+            if (exceptionHandler != null) exceptionHandler.accept(thrown);
             return null;
         }
-    }
-
-    @SafeVarargs
-    public static <T> DynamicSwitch<T> of(ReturningExecutor def, Case<? extends T>... cases) {
-        return new DynamicSwitch<>(def, cases);
-    }
-
-    @SafeVarargs
-    public static <T> DynamicSwitch<T> of(Case<? extends T>... cases) {
-        return new DynamicSwitch<>(null, cases);
     }
 
     @SafeVarargs
@@ -68,12 +69,12 @@ public class DynamicSwitch<T> implements Function<T, Object> {
 
     @SafeVarargs
     public static <T> Case<T> Case(T value, ReturningExecutor executor, T... extra) {
-        return new Case<T>(value, () -> new Result(executor.execute()), extra);
+        return new Case<>(value, () -> new Result(executor.execute()), extra);
     }
 
     @SafeVarargs
     public static <T> Case<T> Case(T value, Object result, T... extra) {
-        return new Case<T>(value, () -> new Result(result), extra);
+        return new Case<>(value, () -> new Result(result), extra);
     }
 
     public static class Case<T> {

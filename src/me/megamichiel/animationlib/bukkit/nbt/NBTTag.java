@@ -18,14 +18,36 @@ public class NBTTag implements Cloneable {
         map = util.getMap(handle);
     }
 
+    public int size() {
+        return map.size();
+    }
+
+    public boolean isEmpty() {
+        return map.isEmpty();
+    }
+
     public void setRaw(String key, Object value) {
         if (value == null) map.remove(key);
         else map.put(key, value);
     }
 
+    public Object getRaw(String key) {
+        return map.get(key);
+    }
+
     public void set(String key, Object value) {
         if (value == null) map.remove(key);
         else map.put(key, util.wrap(value));
+    }
+
+    public <T> void set(NBTKey<T> key, T value) {
+        if (value == null) map.remove(key.id);
+        else map.put(key.id, key.modifier.wrap(value));
+    }
+
+    public <T> T get(NBTKey<T> key) {
+        Object value = map.get(key.id);
+        return value != null ? key.modifier.unwrap(value) : null;
     }
 
     public void remove(String key) {

@@ -4,7 +4,6 @@ import me.megamichiel.animationlib.Nagger;
 
 /**
  * A convenience {@link IPlaceholder}, which retrieves an Integer
- *
  */
 public class NumberPlaceholder implements IPlaceholder<Integer> {
     
@@ -38,8 +37,9 @@ public class NumberPlaceholder implements IPlaceholder<Integer> {
             placeholder = IPlaceholder.constant(val);
         } catch (NumberFormatException ex) {
             StringBundle sb = StringBundle.parse(Nagger.ILLEGAL_ARGUMENT, string);
-            if (!sb.containsPlaceholders())
+            if (!sb.containsPlaceholders()) {
                 throw new IllegalArgumentException(string + " is not a number!");
+            }
             placeholder = (CtxPlaceholder<Integer>) (nagger, who, ctx) -> {
                 String result = sb.invoke(nagger, who, ctx);
                 try {
@@ -52,7 +52,11 @@ public class NumberPlaceholder implements IPlaceholder<Integer> {
         }
         handle = placeholder;
     }
-    
+
+    public IPlaceholder<Integer> getHandle() {
+        return handle;
+    }
+
     @Override
     public Integer invoke(Nagger nagger, Object who) {
         return handle.invoke(nagger, who);
