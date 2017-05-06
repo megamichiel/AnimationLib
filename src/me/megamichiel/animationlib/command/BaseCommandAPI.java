@@ -26,13 +26,16 @@ public abstract class BaseCommandAPI<P, S, C> implements CommandAPI<P, S, C> {
     private final Map<Class<?>, DelegateArgument<S, ?>> delegateArguments = new HashMap<>();
     private final Map<Class<?>, CommandResultHandler<S, ?>> resultHandlers = new HashMap<>();
 
-    protected BaseCommandAPI() {
-        if (instance == null) instance = this;
+    protected final String red;
+
+    protected BaseCommandAPI(String red) {
+        if (instance == null) {
+            instance = this;
+        }
+        this.red = red;
     }
 
     public abstract void sendMessage(Object sender, String message);
-
-    public abstract String red();
 
     @Override
     public List<CommandSubscription<C>> registerCommands(P plugin,
@@ -49,7 +52,7 @@ public abstract class BaseCommandAPI<P, S, C> implements CommandAPI<P, S, C> {
                 try {
                     if (names.length == 0)
                         throw new IllegalArgumentException("Method " + type.getName() + "::" + method.getName() + " has no names specified!");
-                    list.add(new ReflectCommandExecutor(this, adapter, method, handler));
+                    list.add(new ReflectCommandExecutor(this, red, adapter, method, handler));
                 } catch (IllegalArgumentException ex) {
                     System.err.println("[CommandAPI] Failed to register event for " + type.getName() + "::" + method.getName());
                     ex.printStackTrace();

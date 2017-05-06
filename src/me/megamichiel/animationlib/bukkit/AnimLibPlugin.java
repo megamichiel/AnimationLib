@@ -1,6 +1,8 @@
 package me.megamichiel.animationlib.bukkit;
 
 import me.megamichiel.animationlib.AnimLib;
+import me.megamichiel.animationlib.bukkit.placeholder.MVdWPlaceholder;
+import me.megamichiel.animationlib.bukkit.placeholder.PapiPlaceholder;
 import me.megamichiel.animationlib.config.ConfigManager;
 import me.megamichiel.animationlib.config.type.YamlConfig;
 import me.megamichiel.animationlib.placeholder.StringBundle;
@@ -25,7 +27,8 @@ public class AnimLibPlugin extends JavaPlugin implements AnimLib<Event> {
 
     @Override
     public void onLoad() {
-        StringBundle.setAdapter(PapiPlaceholder::resolve);
+        config.file(new File(getDataFolder(), "config.yml")).saveDefaultConfig(() -> getResource("config_bukkit.yml"));
+        StringBundle.setAdapter(config.getConfig().getBoolean("use-mvdwplaceholderapi") ? MVdWPlaceholder::resolve : PapiPlaceholder::resolve);
     }
 
     private String update;
@@ -40,7 +43,7 @@ public class AnimLibPlugin extends JavaPlugin implements AnimLib<Event> {
     @Override
     public void onEnable() {
         instance = this;
-        getServer().getScheduler().runTaskAsynchronously(this, () -> {
+        post(() -> {
             try {
                 String update = AnimLib.getVersion(22295);
                 if (!update.equals(getDescription().getVersion())) {
@@ -55,32 +58,28 @@ public class AnimLibPlugin extends JavaPlugin implements AnimLib<Event> {
             } catch (IOException ex) {
                 getLogger().warning("Failed to check for updates");
             }
-        });
-        config.file(new File(getDataFolder(), "config.yml"))
-                .saveDefaultConfig(() -> getResource("config_bukkit.yml"));
+        }, ASYNC);
 
-        if (PapiPlaceholder.apiAvailable) {
+        post(() -> {
             placeholders = AnimLibPlaceholders.init(this);
-            PapiPlaceholder.registerListener(this);
-        }
 
-        loadConfig();
+            loadConfig();
+        }, SYNC);
     }
 
     private void loadConfig() {
-        config.reloadConfig();
-
         YamlConfig config = this.config.getConfig();
 
         autoDownloadPlaceholders = config.getBoolean("auto-download-placeholders");
 
         DataBase.load(this, config.getSection("databases"));
 
-        if (PapiPlaceholder.apiAvailable)
+        if (placeholders != null) {
             placeholders.load(config);
+        }
     }
 
-    boolean autoDownloadPlaceholders() {
+    public boolean autoDownloadPlaceholders() {
         return autoDownloadPlaceholders;
     }
 
@@ -102,6 +101,8 @@ public class AnimLibPlugin extends JavaPlugin implements AnimLib<Event> {
         }
         switch (args[0]) {
             case "reload":
+                config.reloadConfig();
+
                 loadConfig();
                 sender.sendMessage(ChatColor.GREEN + "Reload successful!");
                 break;

@@ -26,7 +26,7 @@ public class ConcurrentContext implements Runnable, PlaceholderContext {
 
     protected void playerQuit(Object player) {
         Map<String, Entry> values = this.values.remove(player);
-        if (values != null) values.values().forEach(entries::remove);
+        if (values != null) entries.removeAll(values.values());
     }
 
     @Override

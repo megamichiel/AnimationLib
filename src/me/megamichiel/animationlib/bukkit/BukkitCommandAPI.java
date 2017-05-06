@@ -6,6 +6,7 @@ import me.megamichiel.animationlib.command.CommandInfo;
 import me.megamichiel.animationlib.command.CommandSubscription;
 import me.megamichiel.animationlib.command.exec.CommandContext;
 import me.megamichiel.animationlib.command.exec.TabCompleteContext;
+import me.megamichiel.animationlib.util.ReflectClass;
 import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -38,9 +39,10 @@ public class BukkitCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
     private static final Supplier<CommandMap> DUMMY = LazyValue.of(() -> new SimpleCommandMap(getServer()));
     private static final Supplier<Map<String, Command>> DUMMY_VALUES = LazyValue.of(HashMap::new);
 
-    private final Map<Class<?>, Field> fields = new HashMap<>();
+    private final Map<Class<?>, ReflectClass.Field> fields = new HashMap<>();
 
-    {
+    BukkitCommandAPI() {
+        super(ChatColor.RED.toString());
         registerDelegateArgument(Player.class, (sender, arg) -> {
             for (Player p : Bukkit.getOnlinePlayers())
                 if (p.getName().equals(arg)) return p;
@@ -60,18 +62,8 @@ public class BukkitCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
 
     private CommandMap getCommandMap() {
         PluginManager pm = Bukkit.getPluginManager();
-        Field f = fields.computeIfAbsent(pm.getClass(), c -> {
-            try {
-                Field field = c.getDeclaredField("commandMap");
-                field.setAccessible(true);
-                return field;
-            } catch (NoSuchFieldException ex) {
-                ex.printStackTrace();
-                return null;
-            }
-        });
         try {
-            return (CommandMap) f.get(pm);
+            return (CommandMap) fields.computeIfAbsent(pm.getClass(), c -> new ReflectClass(c).getField("commandMap").makeAccessible()).get(pm);
         } catch (Exception ex) {
             return DUMMY.get();
         }
@@ -82,18 +74,8 @@ public class BukkitCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
     }
 
     private Map<String, Command> getKnownCommandsMap(CommandMap map) {
-        Field f = fields.computeIfAbsent(map.getClass(), c -> {
-            try {
-                Field field = c.getDeclaredField("knownCommands");
-                field.setAccessible(true);
-                return field;
-            } catch (NoSuchFieldException ex) {
-                ex.printStackTrace();
-                return null;
-            }
-        });
         try {
-            return (Map<String, Command>) f.get(map);
+            return (Map<String, Command>) fields.computeIfAbsent(map.getClass(), c -> new ReflectClass(c).getField("knownCommands").makeAccessible()).get(map);
         } catch (Exception ex) {
             return DUMMY_VALUES.get();
         }
@@ -102,11 +84,6 @@ public class BukkitCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
     @Override
     public void sendMessage(Object sender, String message) {
         ((CommandSender) sender).sendMessage(message);
-    }
-
-    @Override
-    public String red() {
-        return ChatColor.RED.toString();
     }
 
     @Override

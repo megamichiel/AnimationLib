@@ -1,7 +1,6 @@
 package me.megamichiel.animationlib.placeholder;
 
 import me.megamichiel.animationlib.Nagger;
-import me.megamichiel.animationlib.bukkit.PapiPlaceholder;
 import me.megamichiel.animationlib.placeholder.ctx.ParsingContext;
 import me.megamichiel.animationlib.util.StringReader;
 
@@ -106,7 +105,7 @@ public class Formula implements CtxPlaceholder<String> {
                         if (!reader.isReadable())
                             throw new IllegalArgumentException("Placeholder not closed off in " + src + "!");
                     }
-                    values.add(PapiPlaceholder.resolve(sb.toString()));
+                    values.add(StringBundle.createPlaceholder(sb.toString()));
                     break;
                 case '(':
                     values.add(parse(reader, ctx, true));

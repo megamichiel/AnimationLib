@@ -7,6 +7,7 @@ import me.megamichiel.animationlib.command.CommandInfo;
 import me.megamichiel.animationlib.command.CommandSubscription;
 import me.megamichiel.animationlib.command.exec.CommandContext;
 import me.megamichiel.animationlib.command.exec.TabCompleteContext;
+import me.megamichiel.animationlib.util.ReflectClass;
 import net.md_5.bungee.BungeeCord;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.CommandSender;
@@ -18,7 +19,6 @@ import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.api.plugin.PluginManager;
 import net.md_5.bungee.api.plugin.TabExecutor;
 
-import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
@@ -29,10 +29,11 @@ public class BungeeCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
         return (BungeeCommandAPI) BaseCommandAPI.<Plugin, CommandSender, Command>getInstance();
     }
 
-    private final Map<Class<?>, Field> commandMap = new HashMap<>(),
-                                       commandsByPlugin = new HashMap<>();
+    private final Map<Class<?>, ReflectClass.Field> commandMap = new HashMap<>(),
+                                              commandsByPlugin = new HashMap<>();
 
-    {
+    BungeeCommandAPI() {
+        super(ChatColor.RED.toString());
         registerDelegateArgument(ProxiedPlayer.class, (sender, arg) -> {
             ProxiedPlayer player = BungeeCord.getInstance().getPlayer(arg);
             if (player != null) return player;
@@ -52,18 +53,8 @@ public class BungeeCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
 
     private Map<String, Command> getCommandMap() {
         PluginManager pm = BungeeCord.getInstance().getPluginManager();
-        Field field = commandMap.computeIfAbsent(pm.getClass(), c -> {
-            try {
-                Field f = c.getDeclaredField("commandMap");
-                f.setAccessible(true);
-                return f;
-            } catch (NoSuchFieldException e) {
-                e.printStackTrace();
-                return null;
-            }
-        });
         try {
-            return (Map<String, Command>) field.get(pm);
+            return (Map<String, Command>) commandMap.computeIfAbsent(pm.getClass(), c -> new ReflectClass(c).getField("commandMap").makeAccessible()).get(pm);
         } catch (Exception ex) {
             return new HashMap<>();
         }
@@ -71,18 +62,8 @@ public class BungeeCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
 
     private Multimap<Plugin, Command> getCommandsByPlugin() {
         PluginManager pm = BungeeCord.getInstance().getPluginManager();
-        Field field = commandsByPlugin.computeIfAbsent(pm.getClass(), c -> {
-            try {
-                Field f = c.getDeclaredField("commandsByPlugin");
-                f.setAccessible(true);
-                return f;
-            } catch (NoSuchFieldException e) {
-                e.printStackTrace();
-                return null;
-            }
-        });
         try {
-            return (Multimap<Plugin, Command>) field.get(pm);
+            return (Multimap<Plugin, Command>) commandsByPlugin.computeIfAbsent(pm.getClass(), c -> new ReflectClass(c).getField("commandsByPlugin").makeAccessible()).get(pm);
         } catch (Exception ex) {
             return HashMultimap.create();
         }
@@ -91,11 +72,6 @@ public class BungeeCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
     @Override
     public void sendMessage(Object sender, String message) {
         ((ProxiedPlayer) sender).sendMessage(TextComponent.fromLegacyText(message));
-    }
-
-    @Override
-    public String red() {
-        return ChatColor.RED.toString();
     }
 
     @Override
@@ -114,9 +90,10 @@ public class BungeeCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
                     public void unsubscribe() {
                         getCommandMap().put(label, command);
 
-                        Collection<Command> commands = getCommandsByPlugin().get(plugin);
-                        if (!commands.contains(command))
-                            commands.add(command);
+                        Multimap<Plugin, Command> commands = getCommandsByPlugin();
+                        if (!commands.containsEntry(plugin, command)) {
+                            commands.put(plugin, command);
+                        }
 
                         unsubscribed = true;
                     }
@@ -164,7 +141,7 @@ public class BungeeCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
             @Override
             public void execute(CommandSender sender, String[] args) {
                 if (permission != null && !sender.hasPermission(permission)) {
-                    sendMessage(sender, permissionMessage == null ? red() + "You don't have permssion for that!" : permissionMessage);
+                    sendMessage(sender, permissionMessage == null ? red + "You don't have permssion for that!" : permissionMessage);
                     return;
                 }
                 command.execute(new CommandContext<>(BungeeCommandAPI.this, sender, this, command.name(), args));

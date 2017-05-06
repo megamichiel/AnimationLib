@@ -20,6 +20,9 @@ Formulas:
   reversed-food: '-%player_food_level% + 20'
   server-sum: '%bungeecord_server1% + %bungeecord_server2%'
 
+#Use MVdWPlaceholderAPI for placeholders instead of clip's PlaceholderAPI
+Use-MVdWPlaceholderAPI: false
+
 #Here you can declare your SQL databases
 #Databases:
 #  testdb:

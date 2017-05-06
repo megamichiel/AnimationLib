@@ -2,6 +2,7 @@
 This page describes what you can do with AnimationLib's config file  
 ### Summary ###
 - [Auto-Download-Placeholders](#user-content-auto-download-placeholders)
+- [Use-MVdWPlaceholderAPI](#user-content-use-mvdwplaceholderapi)
 - [Databases](#user-content-databases)
 - [Formula-Locale](#user-content-formula-locale)
 - [Formulas](#user-content-formulas)
@@ -9,6 +10,9 @@ This page describes what you can do with AnimationLib's config file
 
 - #### Auto-Download-Placeholders ####
   When set to 'true' and a placeholder is used with an unknown expansion, it will be automatically downloaded  
+
+- #### Use-MVdWPlaceholderAPI ####
+  Use MVdWPlaceholderAPI for placeholders instead of clip's PlaceholderAPI  
 
 - #### Databases ####
   Section  

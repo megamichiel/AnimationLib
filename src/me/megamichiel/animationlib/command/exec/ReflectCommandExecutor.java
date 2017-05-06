@@ -51,6 +51,7 @@ public class ReflectCommandExecutor implements CommandExecutor {
     }
 
     private final BaseCommandAPI<?, ?, ?> api;
+    private final String red;
     private final CommandAdapter adapter;
     private final CommandHandler handler;
 
@@ -58,11 +59,12 @@ public class ReflectCommandExecutor implements CommandExecutor {
     private final List<ArgumentParser> subcommands = new ArrayList<>();
     private Method tabCompleter;
 
-    public ReflectCommandExecutor(BaseCommandAPI<?, ?, ?> api,
+    public ReflectCommandExecutor(BaseCommandAPI<?, ?, ?> api, String red,
                                   CommandAdapter adapter, Method method,
                                   CommandHandler handler)
             throws IllegalArgumentException {
         this.api = api;
+        this.red = red;
         this.adapter = adapter;
         this.handler = handler;
 
@@ -95,19 +97,19 @@ public class ReflectCommandExecutor implements CommandExecutor {
             } catch (InvalidUsageException ex) {
                 // Possibly incorrect subcommand
             } catch (IllegalArgumentException ex) {
-                api.sendMessage(sender, api.red() + ex.getMessage());
+                api.sendMessage(sender, red + ex.getMessage());
                 return;
             }
         }
         try {
             parse(parser, sender, cmd, label, args);
         } catch (IllegalArgumentException ex) {
-            api.sendMessage(sender, api.red() + ex.getMessage());
+            api.sendMessage(sender, red + ex.getMessage());
         } catch (InvalidUsageException ex) {
-            if (!handler.usage().isEmpty())
-                api.sendMessage(sender, api.red() + handler.usage().replace("<command>", label));
-            else {
-                StringBuilder sb = new StringBuilder(api.red())
+            if (!handler.usage().isEmpty()) {
+                api.sendMessage(sender, red + handler.usage().replace("<command>", label));
+            } else {
+                StringBuilder sb = new StringBuilder(red)
                         .append(parser.getUsage(sender, label));
                 for (ArgumentParser subcommand : subcommands)
                     sb.append(" OR ").append(subcommand.getUsage(sender, label));
@@ -122,7 +124,7 @@ public class ReflectCommandExecutor implements CommandExecutor {
         try {
             tabCompleter.invoke(adapter, ctx);
         } catch (Exception ex) {
-            ctx.sendMessage(api.red() + "An error occurred on performing this command");
+            ctx.sendMessage(red + "An error occurred on performing this command");
             ex.printStackTrace();
         }
     }
@@ -136,7 +138,7 @@ public class ReflectCommandExecutor implements CommandExecutor {
             if (o != null) {
                 if (o instanceof Boolean) {
                     if (!(Boolean) o)
-                        api.sendMessage(sender, api.red() + parser.getUsage(sender, label));
+                        api.sendMessage(sender, red + parser.getUsage(sender, label));
                 } else if (o instanceof String) api.sendMessage(sender, (String) o);
                 else {
                     CommandResultHandler handler = api.getCommandResultHandler(o.getClass());
@@ -149,7 +151,7 @@ public class ReflectCommandExecutor implements CommandExecutor {
                 if (cause instanceof CommandException)
                     throw cause instanceof InvalidUsageException ? (InvalidUsageException) cause : new IllegalArgumentException(cause.getMessage());
             }
-            api.sendMessage(sender, api.red() + "An error occurred on performing this command");
+            api.sendMessage(sender, red + "An error occurred on performing this command");
             ex.printStackTrace();
         }
     }

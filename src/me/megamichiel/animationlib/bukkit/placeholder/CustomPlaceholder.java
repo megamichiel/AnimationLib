@@ -1,4 +1,4 @@
-package me.megamichiel.animationlib.bukkit;
+package me.megamichiel.animationlib.bukkit.placeholder;
 
 import me.clip.placeholderapi.external.EZPlaceholderHook;
 import org.bukkit.entity.Player;

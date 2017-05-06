@@ -19,13 +19,34 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.BiFunction;
 
-public class AnimLibPlaceholders extends PlaceholderHook {
+public class AnimLibPlaceholders implements BiFunction<Player, String, String> {
 
     static AnimLibPlaceholders init(AnimLibPlugin plugin) {
         AnimLibPlaceholders res = new AnimLibPlaceholders(plugin);
-        PlaceholderAPI.registerPlaceholderHook("animlib", res);
-        return res;
+        boolean used = false;
+        try {
+            PlaceholderAPI.registerPlaceholderHook("animlib", new PlaceholderHook() {
+                @Override
+                public String onPlaceholderRequest(Player player, String arg) {
+                    return res.apply(player, arg);
+                }
+            });
+            used = true;
+        } catch (NoClassDefFoundError err) {
+            // No PlaceholderAPI
+        }
+        if (plugin.getServer().getPluginManager().isPluginEnabled("MVdWPlaceholderAPI")) {
+            try {
+                be.maximvdw.placeholderapi.PlaceholderAPI.registerPlaceholder(plugin, "animlib",
+                        event -> res.apply(event.getPlayer(), event.getPlaceholder()));
+                used = true;
+            } catch (NoClassDefFoundError err) {
+                // No MVdWPlaceholderAPI
+            }
+        }
+        return used ? res : null;
     }
 
     private final AnimLibPlugin plugin;
@@ -91,7 +112,7 @@ public class AnimLibPlaceholders extends PlaceholderHook {
     }
 
     @Override
-    public String onPlaceholderRequest(Player player, String arg) {
+    public String apply(Player player, String arg) {
         if (arg.startsWith("formula_")) {
             IPlaceholder<String> formula = formulas.get(arg.substring(8));
             return formula == null ? null : formula.invoke(plugin, player);
