@@ -77,9 +77,10 @@ public class ConfigManager<C extends AbstractConfig> {
 
     public void reloadConfig() throws ConfigException {
         checkState();
+        config = configSupplier.get();
         try {
             if (configFile.exists()) {
-                (config = configSupplier.get()).loadFromFile(configFile);
+                config.loadFromFile(configFile);
             }
         } catch (IOException ex) {
             throw new ConfigException("Couldn't open " + configFile.getName(), ex);

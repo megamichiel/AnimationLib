@@ -5,6 +5,7 @@ import me.megamichiel.animationlib.bukkit.placeholder.MVdWPlaceholder;
 import me.megamichiel.animationlib.bukkit.placeholder.PapiPlaceholder;
 import me.megamichiel.animationlib.config.ConfigManager;
 import me.megamichiel.animationlib.config.type.YamlConfig;
+import me.megamichiel.animationlib.placeholder.IPlaceholder;
 import me.megamichiel.animationlib.placeholder.StringBundle;
 import me.megamichiel.animationlib.util.db.DataBase;
 import me.megamichiel.animationlib.util.pipeline.Pipeline;
@@ -28,7 +29,17 @@ public class AnimLibPlugin extends JavaPlugin implements AnimLib<Event> {
     @Override
     public void onLoad() {
         config.file(new File(getDataFolder(), "config.yml")).saveDefaultConfig(() -> getResource("config_bukkit.yml"));
-        StringBundle.setAdapter(config.getConfig().getBoolean("use-mvdwplaceholderapi") ? MVdWPlaceholder::resolve : PapiPlaceholder::resolve);
+        if (config.getConfig().getBoolean("use-mvdwplaceholderapi")) {
+            if (MVdWPlaceholder.apiAvailable) {
+                StringBundle.setAdapter(MVdWPlaceholder::resolve);
+                return;
+            }
+        }
+        if (PapiPlaceholder.apiAvailable) {
+            StringBundle.setAdapter(PapiPlaceholder::resolve);
+            return;
+        }
+        StringBundle.setAdapter(str -> IPlaceholder.constant(null));
     }
 
     private String update;

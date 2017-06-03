@@ -27,12 +27,16 @@ import java.util.function.BiFunction;
 public class PapiPlaceholder implements IPlaceholder<String> {
 
     public static boolean register(Plugin plugin, String identifier, BiFunction<Player, String, String> func) {
-        return apiAvailable && PlaceholderAPI.registerPlaceholderHook(identifier == null ? plugin.getName().toLowerCase(Locale.ENGLISH) : identifier, new PlaceholderHook() {
+        return apiAvailable && new PlaceholderHook() {
+
+            final boolean hooked = PlaceholderAPI.registerPlaceholderHook(identifier == null
+                    ? plugin.getName().toLowerCase(Locale.ENGLISH) : identifier, this);
+
             @Override
             public String onPlaceholderRequest(Player player, String s) {
                 return func.apply(player, s);
             }
-        });
+        }.hooked;
     }
     
     public static final boolean apiAvailable;

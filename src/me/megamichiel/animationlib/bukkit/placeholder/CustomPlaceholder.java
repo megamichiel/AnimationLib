@@ -1,6 +1,5 @@
 package me.megamichiel.animationlib.bukkit.placeholder;
 
-import me.clip.placeholderapi.external.EZPlaceholderHook;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
@@ -9,16 +8,15 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-public class CustomPlaceholder extends EZPlaceholderHook {
+public class CustomPlaceholder implements BiFunction<Player, String, String> {
 
     private final Map<String, Function<Player, String>> matches = new HashMap<>();
     private final Map<String, BiFunction<Player, String, String>> startsWith = new HashMap<>();
     private BiFunction<Player, String, String> lastResort;
 
     protected CustomPlaceholder(Plugin plugin, String identifier) {
-        super(plugin, identifier);
-
-        hook();
+        PapiPlaceholder.register(plugin, identifier, this);
+        MVdWPlaceholder.register(plugin, identifier, this);
     }
 
     protected CustomPlaceholder matches(String text, Function<Player, String> function) {
@@ -37,7 +35,7 @@ public class CustomPlaceholder extends EZPlaceholderHook {
     }
 
     @Override
-    public final String onPlaceholderRequest(Player player, String s) {
+    public final String apply(Player player, String s) {
         Function<Player, String> function = matches.get(s);
         if (function != null) return function.apply(player);
         for (Map.Entry<String, BiFunction<Player, String, String>> entry : startsWith.entrySet()) {
