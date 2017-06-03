@@ -7,11 +7,31 @@ import me.megamichiel.animationlib.Nagger;
 import me.megamichiel.animationlib.placeholder.IPlaceholder;
 import me.megamichiel.animationlib.placeholder.PlaceholderContext;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
 
 public class MVdWPlaceholder implements IPlaceholder<String> {
+
+    public static boolean register(Plugin plugin, String identifier, BiFunction<Player, String, String> func) {
+        return apiAvailable && PlaceholderAPI.registerPlaceholder(plugin, identifier == null ? plugin.getName().toLowerCase(Locale.ENGLISH) : identifier, evt -> func.apply(evt.getPlayer(), evt.getPlaceholder()));
+    }
+
+    public static final boolean apiAvailable;
+
+    static {
+        boolean flag;
+        try {
+            Class.forName("be.maximvdw.placeholderapi.PlaceholderAPI");
+            flag = true;
+        } catch (ClassNotFoundException ex) {
+            flag = false;
+        }
+        apiAvailable = flag;
+    }
 
     private static final Map<String, MVdWPlaceholder> registry = new ConcurrentHashMap<>();
 

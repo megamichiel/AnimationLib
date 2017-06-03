@@ -143,6 +143,10 @@ public class ReflectClass {
             return new ReflectClass(handle.getDeclaringClass());
         }
 
+        public boolean isOwner(Object instance) {
+            return handle.getDeclaringClass().isInstance(instance);
+        }
+
         public Object get(Object instance) throws ReflectException {
             try {
                 return handle.get(instance);
@@ -411,6 +415,10 @@ public class ReflectClass {
             return new ReflectClass(handle.getDeclaringClass());
         }
 
+        public boolean canInvoke(Object instance) {
+            return handle.getDeclaringClass().isInstance(instance);
+        }
+
         public Object invoke(Object instance, Object... params) throws ReflectException {
             try {
                 return handle.invoke(instance, params);
@@ -419,8 +427,51 @@ public class ReflectClass {
             }
         }
 
+        public boolean invokeAsBoolean(Object instance, Object... params) throws ReflectException {
+            return (boolean) invoke(instance, params);
+        }
+
+        public char invokeAsChar(Object instance, Object... params) throws ReflectException {
+            return (char) invoke(instance, params);
+        }
+
+        public byte invokeAsByte(Object instance, Object... params) throws ReflectException {
+            return (byte) invoke(instance, params);
+        }
+
+        public short invokeAsShort(Object instance, Object... params) throws ReflectException {
+            return (short) invoke(instance, params);
+        }
+
+        public int invokeAsInt(Object instance, Object... params) throws ReflectException {
+            return (int) invoke(instance, params);
+        }
+
+        public long invokeAsLong(Object instance, Object... params) throws ReflectException {
+            return (long) invoke(instance, params);
+        }
+
+        public float invokeAsFloat(Object instance, Object... params) throws ReflectException {
+            return (float) invoke(instance, params);
+        }
+
+        public double invokeAsDouble(Object instance, Object... params) throws ReflectException {
+            return (double) invoke(instance, params);
+        }
+
+
+        @SuppressWarnings("unchecked")
+        public <T> T invokeGeneric(Object instance, Object... params) throws ReflectException {
+            return (T) invoke(instance, params);
+        }
+
         public Object invokeStatic(Object... params) throws ReflectException {
             return invoke(null, params);
+        }
+
+        @SuppressWarnings("unchecked")
+        public <T> T invokeGenericStatic(Object... params) throws ReflectException {
+            return (T) invoke(null, params);
         }
     }
 

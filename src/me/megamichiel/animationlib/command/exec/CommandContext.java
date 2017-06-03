@@ -40,6 +40,10 @@ public class CommandContext<S, C> {
         return args;
     }
 
+    public int length() {
+        return args.length;
+    }
+
     public String getArg(int index) {
         return index < args.length ? args[index] : null;
     }

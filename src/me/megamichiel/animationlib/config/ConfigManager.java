@@ -1,5 +1,7 @@
 package me.megamichiel.animationlib.config;
 
+import com.google.gson.JsonParseException;
+
 import java.io.*;
 import java.util.function.Supplier;
 
@@ -9,7 +11,7 @@ public class ConfigManager<C extends AbstractConfig> {
         return new ConfigManager<>(configSupplier);
     }
 
-    public static <C extends AbstractConfig> C quickLoad(Supplier<C> configSupplier, File file) {
+    public static <C extends AbstractConfig> C quickLoad(Supplier<C> configSupplier, File file) throws ConfigException {
         return new ConfigManager<>(configSupplier).file(file).getConfig();
     }
 
@@ -32,11 +34,12 @@ public class ConfigManager<C extends AbstractConfig> {
     }
 
     private void checkState() {
-        if (configFile == null)
+        if (configFile == null) {
             throw new IllegalStateException("file(File) has not been called yet!");
+        }
     }
 
-    public void saveDefaultConfig(Supplier<InputStream> defaults) {
+    public void saveDefaultConfig(Supplier<InputStream> defaults) throws ConfigException {
         checkState();
         if (!configFile.exists() && (configFile.getParentFile().isDirectory()
                 || configFile.getParentFile().mkdirs())) {
@@ -47,48 +50,56 @@ public class ConfigManager<C extends AbstractConfig> {
                     in = defaults.get();
                     out = new FileOutputStream(configFile);
                     byte[] buf = new byte[4096];
-                    for (int read; (read = in.read(buf, 0, 4096)) != -1;)
+                    for (int read; (read = in.read(buf, 0, 4096)) != -1; ) {
                         out.write(buf, 0, read);
+                    }
                 }
             } catch (IOException ex) {
-                ex.printStackTrace();
+                throw new ConfigException("Couldn't write to file", ex);
             } finally {
-                if (in != null) try {
-                    in.close();
-                } catch (IOException ex) {
-                    ex.printStackTrace();
+                if (in != null) {
+                    try {
+                        in.close();
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
                 }
-                if (out != null) try {
-                    out.close();
-                } catch (IOException ex) {
-                    ex.printStackTrace();
+                if (out != null) {
+                    try {
+                        out.close();
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
                 }
             }
         }
     }
 
-    public void reloadConfig() {
+    public void reloadConfig() throws ConfigException {
         checkState();
         try {
             if (configFile.exists()) {
                 (config = configSupplier.get()).loadFromFile(configFile);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            throw new ConfigException("Couldn't open " + configFile.getName(), ex);
+        } catch (JsonParseException ex) {
+            throw new ConfigException("Couldn't load " + configFile.getName(), ex);
         }
     }
 
-    public C getConfig() {
-        if (config == null) reloadConfig();
+    public C getConfig() throws ConfigException {
+        if (config == null) {
+            reloadConfig();
+        }
         return config;
     }
 
-    public void saveConfig() {
-        checkState();
+    public void saveConfig() throws ConfigException {
         try {
             getConfig().save(configFile);
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
     }
 }

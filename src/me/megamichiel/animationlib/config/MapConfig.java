@@ -3,7 +3,8 @@ package me.megamichiel.animationlib.config;
 import java.io.*;
 import java.lang.reflect.Array;
 import java.util.*;
-import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class MapConfig extends AbstractConfig implements Serializable {
 
@@ -25,9 +26,11 @@ public class MapConfig extends AbstractConfig implements Serializable {
     }
 
     private Object mapValue(Object o) {
-        if (o instanceof Map) return new MapConfig((Map) o, caseInsensitive);
-        else if (o instanceof Iterable) return mapValues((Iterable) o);
-        else if (o instanceof String) {
+        if (o instanceof Map) {
+            return new MapConfig((Map) o, caseInsensitive);
+        } else if (o instanceof Iterable) {
+            return StreamSupport.stream(((Iterable<?>) o).spliterator(), false).map(this::mapValue).collect(Collectors.toList());
+        } else if (o instanceof String) {
             String s = ((String) o).toLowerCase(Locale.ENGLISH);
             switch (s) {
                 case "true":  return Boolean.TRUE;
@@ -61,12 +64,18 @@ public class MapConfig extends AbstractConfig implements Serializable {
                     return l;
                 }
             }
+        } else if (o instanceof Map.Entry) {
+            Map.Entry entry = (Map.Entry) o;
+            MapConfig map = new MapConfig(caseInsensitive);
+            map.set(entry.getKey().toString(), map.mapValue(entry.getValue()));
+            return map;
         } else if (o != null && o.getClass().isArray()) {
+            int i = 0, length = Array.getLength(o);
             List<Object> list = new ArrayList<>();
-            for (int i = 0, length = Array.getLength(o); i < length; i++) {
-                list.add(mapValue(Array.get(o, i)));
+            while (i < length) {
+                list.add(mapValue(Array.get(o, i++)));
             }
-            return mapValues(list);
+            return list;
         }
         return o;
     }
@@ -79,18 +88,6 @@ public class MapConfig extends AbstractConfig implements Serializable {
             mappedKeys.put(mapped, key);
             result.put(mapped, mapValue(entry.getValue()));
         }
-        return result;
-    }
-
-    private List<?> mapValues(Iterable iterable) {
-        List<Object> result = new ArrayList<>();
-        for (Object o : iterable)
-            if (o instanceof Map.Entry) {
-                Map.Entry entry = (Map.Entry) o;
-                MapConfig map = new MapConfig(caseInsensitive);
-                map.set(entry.getKey().toString(), entry.getValue());
-                result.add(map);
-            } else result.add(mapValue(o));
         return result;
     }
 

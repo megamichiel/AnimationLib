@@ -51,6 +51,13 @@ public abstract class AbstractConfig {
         return get(path) != null;
     }
 
+    public void replace(String path, Function<Object, ?> func) {
+        Object val = get(path);
+        if (val != (val = func.apply(val))) {
+            set(path, val);
+        }
+    }
+
     public <T> T get(String path, Function<Object, T> func, T def) {
         return Optional.ofNullable(get(path)).map(func).orElse(def);
     }

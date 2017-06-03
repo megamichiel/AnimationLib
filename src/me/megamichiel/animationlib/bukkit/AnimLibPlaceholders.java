@@ -1,7 +1,7 @@
 package me.megamichiel.animationlib.bukkit;
 
-import me.clip.placeholderapi.PlaceholderAPI;
-import me.clip.placeholderapi.PlaceholderHook;
+import me.megamichiel.animationlib.bukkit.placeholder.MVdWPlaceholder;
+import me.megamichiel.animationlib.bukkit.placeholder.PapiPlaceholder;
 import me.megamichiel.animationlib.config.AbstractConfig;
 import me.megamichiel.animationlib.placeholder.Formula;
 import me.megamichiel.animationlib.placeholder.IPlaceholder;
@@ -25,28 +25,7 @@ public class AnimLibPlaceholders implements BiFunction<Player, String, String> {
 
     static AnimLibPlaceholders init(AnimLibPlugin plugin) {
         AnimLibPlaceholders res = new AnimLibPlaceholders(plugin);
-        boolean used = false;
-        try {
-            PlaceholderAPI.registerPlaceholderHook("animlib", new PlaceholderHook() {
-                @Override
-                public String onPlaceholderRequest(Player player, String arg) {
-                    return res.apply(player, arg);
-                }
-            });
-            used = true;
-        } catch (NoClassDefFoundError err) {
-            // No PlaceholderAPI
-        }
-        if (plugin.getServer().getPluginManager().isPluginEnabled("MVdWPlaceholderAPI")) {
-            try {
-                be.maximvdw.placeholderapi.PlaceholderAPI.registerPlaceholder(plugin, "animlib",
-                        event -> res.apply(event.getPlayer(), event.getPlaceholder()));
-                used = true;
-            } catch (NoClassDefFoundError err) {
-                // No MVdWPlaceholderAPI
-            }
-        }
-        return used ? res : null;
+        return PapiPlaceholder.register(plugin, null, res) || MVdWPlaceholder.register(plugin, null, res) ? res : null;
     }
 
     private final AnimLibPlugin plugin;

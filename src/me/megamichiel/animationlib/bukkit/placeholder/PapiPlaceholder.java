@@ -1,5 +1,6 @@
 package me.megamichiel.animationlib.bukkit.placeholder;
 
+import me.clip.placeholderapi.PlaceholderAPI;
 import me.clip.placeholderapi.PlaceholderAPIPlugin;
 import me.clip.placeholderapi.PlaceholderHook;
 import me.clip.placeholderapi.expansion.cloud.CloudExpansion;
@@ -11,16 +12,28 @@ import me.megamichiel.animationlib.placeholder.PlaceholderContext;
 import me.megamichiel.animationlib.util.ReflectClass;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
 
 /**
  * An IPlaceholder&lt;String&gt; which utilizes the plugin PlaceholderAPI
  */
 public class PapiPlaceholder implements IPlaceholder<String> {
+
+    public static boolean register(Plugin plugin, String identifier, BiFunction<Player, String, String> func) {
+        return apiAvailable && PlaceholderAPI.registerPlaceholderHook(identifier == null ? plugin.getName().toLowerCase(Locale.ENGLISH) : identifier, new PlaceholderHook() {
+            @Override
+            public String onPlaceholderRequest(Player player, String s) {
+                return func.apply(player, s);
+            }
+        });
+    }
     
     public static final boolean apiAvailable;
     private static final ReflectClass.Field placeholders;

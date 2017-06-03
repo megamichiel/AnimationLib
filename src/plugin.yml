@@ -1,5 +1,5 @@
 name: AnimationLib
-version: 1.6.1
+version: 1.6.2
 main: me.megamichiel.animationlib.bukkit.AnimLibPlugin
 author: megamichiel
 load: STARTUP
