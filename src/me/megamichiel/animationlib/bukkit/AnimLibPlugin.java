@@ -5,7 +5,7 @@ import me.megamichiel.animationlib.bukkit.placeholder.MVdWPlaceholder;
 import me.megamichiel.animationlib.bukkit.placeholder.PapiPlaceholder;
 import me.megamichiel.animationlib.config.ConfigManager;
 import me.megamichiel.animationlib.config.type.YamlConfig;
-import me.megamichiel.animationlib.placeholder.IPlaceholder;
+import me.megamichiel.animationlib.placeholder.CtxPlaceholder;
 import me.megamichiel.animationlib.placeholder.StringBundle;
 import me.megamichiel.animationlib.util.db.DataBase;
 import me.megamichiel.animationlib.util.pipeline.Pipeline;
@@ -39,7 +39,7 @@ public class AnimLibPlugin extends JavaPlugin implements AnimLib<Event> {
             StringBundle.setAdapter(PapiPlaceholder::resolve);
             return;
         }
-        StringBundle.setAdapter(str -> IPlaceholder.constant(null));
+        StringBundle.setAdapter(str -> CtxPlaceholder.constant(null));
     }
 
     private String update;

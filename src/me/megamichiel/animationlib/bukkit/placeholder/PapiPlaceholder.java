@@ -89,15 +89,26 @@ public class PapiPlaceholder implements IPlaceholder<String> {
 
     @Override
     public String invoke(Nagger nagger, Object who) {
-        if (!apiAvailable) return toString();
+        if (!apiAvailable) {
+            return toString();
+        }
 
         Map map = (Map) placeholders.getStatic();
 
-        if (map == null) return "<unknown_placeholder>";
+        if (map == null) {
+            return "<unknown_placeholder>";
+        }
 
-        PlaceholderHook hook = (PlaceholderHook) map.get(plugin);
+        Object hook = map.get(plugin);
         if (hook != null) {
-            String str = hook.onPlaceholderRequest((Player) who, name);
+            String str;
+            try {
+                str = ((PlaceholderHook) hook).onPlaceholderRequest((Player) who, name);
+            } catch (Exception ex) {
+                nagger.nag("Failed to process placeholder %" + identifier + "%!");
+                nagger.nag(ex);
+                return "<internal_error>";
+            }
             return str != null ? str : "<invalid_argument>";
         } else {
             AnimLibPlugin lib = AnimLibPlugin.getInstance();
@@ -114,10 +125,12 @@ public class PapiPlaceholder implements IPlaceholder<String> {
                         File file = new File(dir, "Expansion-" + expansion.getName() + ".jar");
                         new BukkitRunnable() {
                             int count = 0;
+                            @Override
                             public void run() {
                                 if (file.exists()) {
                                     lib.getLogger().info("Successfully downloaded " + plugin + "!");
                                     Bukkit.getScheduler().runTaskLater(lib, () -> papi.reloadConf(Bukkit.getConsoleSender()), 20L);
+                                    cancel();
                                 } else if (++count == 10) {
                                     lib.getLogger().warning("Unable to download expansion " + plugin + "!");
                                     cancel();

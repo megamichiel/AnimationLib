@@ -2,7 +2,7 @@ package me.megamichiel.animationlib.bungee.category;
 
 import me.megamichiel.animationlib.bungee.AnimLibPlugin;
 import me.megamichiel.animationlib.bungee.RegisteredPlaceholder;
-import me.megamichiel.animationlib.config.AbstractConfig;
+import me.megamichiel.animationlib.config.ConfigSection;
 import me.megamichiel.animationlib.placeholder.Formula;
 import me.megamichiel.animationlib.placeholder.ctx.ParsingContext;
 import me.megamichiel.animationlib.util.db.SQLHandler;
@@ -36,17 +36,17 @@ public class AnimLibCategory extends PlaceholderCategory {
         plugin.getProxy().getScheduler().schedule(plugin, sql, delay, delay, TimeUnit.SECONDS);
     }
 
-    public void loadConfig(AbstractConfig cfg) {
+    public void loadConfig(ConfigSection cfg) {
         formulas.clear();
 
         String locale = cfg.getString("formula-locale");
         if (locale != null) Formula.setLocale(new Locale(locale));
         if (cfg.isSection("formulas")) {
-            AbstractConfig section = cfg.getSection("formulas");
+            ConfigSection section = cfg.getSection("formulas");
             section.forEach((key, value) -> {
                 Formula formula;
-                if (value instanceof AbstractConfig) {
-                    AbstractConfig sec = (AbstractConfig) value;
+                if (value instanceof ConfigSection) {
+                    ConfigSection sec = (ConfigSection) value;
                     String val = sec.getString("value"),
                             format = sec.getString("format");
                     if (val == null) return;

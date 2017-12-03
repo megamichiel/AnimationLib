@@ -9,7 +9,7 @@ public class TabCompleteContext<S, C> extends CommandContext<S, C> {
 
     private List<String> completions = new ArrayList<>();
 
-    public TabCompleteContext(BaseCommandAPI<?, S, C> api, S sender, C command, String label, String[] args) {
+    public TabCompleteContext(BaseCommandAPI<S, C> api, S sender, C command, String label, String[] args) {
         super(api, sender, command, label, args);
     }
 

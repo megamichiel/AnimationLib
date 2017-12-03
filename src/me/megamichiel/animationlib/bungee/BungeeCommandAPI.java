@@ -23,17 +23,21 @@ import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
-public class BungeeCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Command> {
+public class BungeeCommandAPI extends BaseCommandAPI<CommandSender, Command> {
+
+    private final AnimLibPlugin plugin;
 
     public static BungeeCommandAPI getInstance() {
-        return (BungeeCommandAPI) BaseCommandAPI.<Plugin, CommandSender, Command>getInstance();
+        return (BungeeCommandAPI) BaseCommandAPI.<CommandSender, Command>getInstance();
     }
 
     private final Map<Class<?>, ReflectClass.Field> commandMap = new HashMap<>(),
                                               commandsByPlugin = new HashMap<>();
 
-    BungeeCommandAPI() {
+    BungeeCommandAPI(AnimLibPlugin plugin) {
         super(ChatColor.RED.toString());
+        this.plugin = plugin;
+
         registerDelegateArgument(ProxiedPlayer.class, (sender, arg) -> {
             ProxiedPlayer player = BungeeCord.getInstance().getPlayer(arg);
             if (player != null) return player;
@@ -120,22 +124,25 @@ public class BungeeCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
         for (Map.Entry<String, Command> entry : getCommandMap().entrySet())
             if (predicate.test(entry.getKey(), entry.getValue())) {
                 FilterCommand cmd;
-                if ((value = entry.getValue()) instanceof FilterCommand)
+                if ((value = entry.getValue()) instanceof FilterCommand) {
                     cmd = (FilterCommand) value;
-                else entry.setValue(cmd = tabComplete ? new FilterTabCommand(this, value) : new FilterCommand(this, value));
+                } else {
+                    entry.setValue(cmd = tabComplete ? new FilterTabCommand(this, value) : new FilterCommand(this, value));
+                }
                 cmd.addFilter(filter, tabComplete);
             }
         return list;
     }
 
     @Override
-    public CommandSubscription<Command> registerCommand(Plugin plugin, Command command) {
-        BungeeCord.getInstance().getPluginManager().registerCommand(plugin, command);
+    public CommandSubscription<Command> registerCommand(String plugin, Command command) {
+        Plugin p = this.plugin.getProxy().getPluginManager().getPlugin(plugin);
+        BungeeCord.getInstance().getPluginManager().registerCommand(p == null ? this.plugin : p, command);
         return new CommandSubscription<>(this, command);
     }
 
     @Override
-    public CommandSubscription<Command> registerCommand(Plugin plugin, CommandInfo command) {
+    public CommandSubscription<Command> registerCommand(String plugin, CommandInfo command) {
         return registerCommand(plugin, new TabCommand(command.name(), null, command.aliases()) {
             private String permission = command.permission(), permissionMessage = command.permissionMessage();
             @Override

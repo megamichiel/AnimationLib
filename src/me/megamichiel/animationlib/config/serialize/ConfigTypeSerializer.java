@@ -1,6 +1,6 @@
 package me.megamichiel.animationlib.config.serialize;
 
-import me.megamichiel.animationlib.config.AbstractConfig;
+import me.megamichiel.animationlib.config.ConfigSection;
 import me.megamichiel.animationlib.config.MapConfig;
 import me.megamichiel.animationlib.util.DynamicSwitch;
 
@@ -41,14 +41,14 @@ public class ConfigTypeSerializer {
         return array;
     }
 
-    private final AbstractConfig config;
+    private final ConfigSection config;
     private final List<DeserializationContext> deserializationContexts = new ArrayList<>();
 
-    public ConfigTypeSerializer(AbstractConfig config) {
+    public ConfigTypeSerializer(ConfigSection config) {
         this.config = config;
     }
 
-    private ConfigTypeSerializer(AbstractConfig config, ConfigTypeSerializer parent) {
+    private ConfigTypeSerializer(ConfigSection config, ConfigTypeSerializer parent) {
         this.config = config;
         deserializationContexts.addAll(parent.deserializationContexts);
     }
@@ -230,8 +230,8 @@ public class ConfigTypeSerializer {
                     Case(float.class,   num::floatValue),
                     Case(double.class,  num::doubleValue)
             ).apply(type);
-        } else if (configValue instanceof AbstractConfig) {
-            return new ConfigTypeSerializer((AbstractConfig) configValue, this)
+        } else if (configValue instanceof ConfigSection) {
+            return new ConfigTypeSerializer((ConfigSection) configValue, this)
                     .loadAsClass(type, path);
         }
         return configValue;
@@ -264,8 +264,8 @@ public class ConfigTypeSerializer {
                             value instanceof Short || value instanceof Integer ||
                             value instanceof Long || value instanceof Float ||
                             value instanceof Double) return value;
-                    if (value instanceof AbstractConfig) {
-                        return new ConfigTypeSerializer((AbstractConfig) value, this)
+                    if (value instanceof ConfigSection) {
+                        return new ConfigTypeSerializer((ConfigSection) value, this)
                                 .loadAsClass(type, path(path, index));
                     }
                     return null;

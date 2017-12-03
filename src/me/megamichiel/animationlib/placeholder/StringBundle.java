@@ -1,6 +1,7 @@
 package me.megamichiel.animationlib.placeholder;
 
 import me.megamichiel.animationlib.Nagger;
+import me.megamichiel.animationlib.animation.IAnimatable;
 import me.megamichiel.animationlib.placeholder.ctx.ParsingContext;
 import me.megamichiel.animationlib.util.ParsingNagger;
 import me.megamichiel.animationlib.util.StringReader;
@@ -14,7 +15,7 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class StringBundle extends ArrayList<Object> implements CtxPlaceholder<String>, Cloneable {
+public class StringBundle extends ArrayList<Object> implements CtxPlaceholder<String>, IAnimatable<StringBundle>, Cloneable {
 
     public static final char BOX = '\u2588';
 
@@ -23,7 +24,9 @@ public class StringBundle extends ArrayList<Object> implements CtxPlaceholder<St
     private static Function<String, IPlaceholder<String>> adapter;
 
     public static void setAdapter(Function<String, IPlaceholder<String>> adapter) {
-        if (StringBundle.adapter == null) StringBundle.adapter = adapter;
+        if (StringBundle.adapter == null) {
+            StringBundle.adapter = adapter;
+        }
     }
 
     public static IPlaceholder<String> createPlaceholder(String identifier) {
@@ -56,9 +59,11 @@ public class StringBundle extends ArrayList<Object> implements CtxPlaceholder<St
      * Returns whether this StringBundle contains anything other than Strings
      */
     public boolean containsPlaceholders() {
-        for (Object o : this)
-            if (!(o instanceof String))
+        for (Object o : this) {
+            if (!(o instanceof String)) {
                 return true;
+            }
+        }
         return false;
     }
 
@@ -163,8 +168,7 @@ public class StringBundle extends ArrayList<Object> implements CtxPlaceholder<St
      * Returns this StringBundle instance otherwise
      */
     public IPlaceholder<String> tryCache() {
-        if (!containsPlaceholders()) return IPlaceholder.constant(toString(null));
-        return this;
+        return containsPlaceholders() ? this : CtxPlaceholder.constant(toString(null));
     }
 
     /**
@@ -241,8 +245,9 @@ public class StringBundle extends ArrayList<Object> implements CtxPlaceholder<St
         while (reader.isReadable()) {
             char c = reader.readChar();
             if (c == '\\') {
-                if (!(escape = !escape)) // Escaped back-slash
+                if (!(escape = !escape)) { // Escaped back-slash
                     builder.append(c);
+                }
             } else if (escape) {
                 escape = false;
                 switch (c) {
@@ -279,32 +284,71 @@ public class StringBundle extends ArrayList<Object> implements CtxPlaceholder<St
                             bundle.add(builder.toString());
                             builder.setLength(0);
                         }
-                        char read = reader.readChar();
+                        char read = reader.peekChar();
                         ParsingContext context;
                         if (read == ':') {
-                            while ((read = reader.readChar()) != ':')
+                            for (reader.skipChar(); (read = reader.readChar()) != ':'; ) {
                                 builder.append(read);
-                            DecimalFormat format = new DecimalFormat(builder.toString(), Formula.getSymbols());
-                            if (nagger instanceof ParsingNagger) {
-                                ParsingContext base = ((ParsingNagger) nagger).context();
-                                context = new ParsingContext.AbstractParsingContext(format) {
-                                    @Override
-                                    public IPlaceholder<?> parse(String identifier) {
-                                        return base.parse(identifier);
-                                    }
-                                };
-                            } else context = ParsingContext.ofFormat(format);
+                            }
+                            context = ParsingContext.ofFormat(nagger instanceof ParsingNagger ? ((ParsingNagger) nagger).context() : null, new DecimalFormat(builder.toString(), Formula.getSymbols()));
                             builder.setLength(0);
                         } else {
-                            reader.unreadChar();
-                            if (nagger instanceof ParsingNagger)
-                                context = ((ParsingNagger) nagger).context();
-                            else context = ParsingContext.ofFormat(null);
+                            context = nagger instanceof ParsingNagger ? ((ParsingNagger) nagger).context() : ParsingContext.ofFormat(null);
                         }
                         try {
                             bundle.add(Formula.parse(reader, context, true));
                         } catch (IllegalArgumentException ex) {
                             nagger.nag("Failed to parse formula in string " + str + ": " + ex.getMessage());
+                        }
+                        break;
+                    case '{': // Start of special placeholder
+                        if (!(nagger instanceof ParsingNagger)) {
+                            builder.append('{');
+                            break;
+                        }
+                        if (!reader.isReadable()) {
+                            nagger.nag("Text " + str + " ends with a special placeholder symbol!");
+                            builder.append('{');
+                        } else {
+                            if (builder.length() > 0) {
+                                bundle.add(builder.toString());
+                                builder.setLength(0);
+                            }
+
+                            boolean graceful = false;
+                            do {
+                                switch (c = reader.readChar()) {
+                                    case '\\':
+                                        escape = !escape;
+                                        break;
+                                    case '}':
+                                        if (escape) {
+                                            graceful = true;
+                                            break;
+                                        }
+                                    default:
+                                        builder.append(c);
+                                }
+                            } while (!graceful && reader.isReadable());
+
+                            if (!graceful) {
+                                nagger.nag("Special placeholder in " + str + " wasn't closed off! " +
+                                        "Was it a msitake or did you forget to escape the '%' symbol?");
+                            }
+
+                            IPlaceholder<?> parsed;
+                            String placeholder = builder.toString();
+                            for (ParsingContext ctx = ((ParsingNagger) nagger).context(); (parsed = ctx.parse(placeholder)) == null; ) {
+                                if ((ctx = ctx.parent()) == null) {
+                                    nagger.nag("Unknown special placeholder: " + placeholder + '!');
+                                    break;
+                                }
+                            }
+                            if (parsed != null) {
+                                bundle.add(parsed);
+                            }
+
+                            builder.setLength(0);
                         }
                         break;
                     default:
@@ -335,47 +379,6 @@ public class StringBundle extends ArrayList<Object> implements CtxPlaceholder<St
                                 builder.append(c);
                             }
                             bundle.add(createPlaceholder(builder.toString()));
-                            builder.setLength(0);
-                        }
-                        break;
-                    case '{': // Start of special placeholder
-                        if (!(nagger instanceof ParsingNagger)) {
-                            builder.append('{');
-                            break;
-                        }
-                        if (!reader.isReadable()) {
-                            nagger.nag("Text " + str + " ends with a special placeholder symbol!");
-                            builder.append('{');
-                        } else {
-                            if (builder.length() > 0) {
-                                bundle.add(builder.toString());
-                                builder.setLength(0);
-                            }
-
-                            boolean graceful = false;
-                            do {
-                                switch (c = reader.readChar()) {
-                                    case '\\':
-                                        escape = !escape;
-                                        break;
-                                    case '}':
-                                        if (!escape) {
-                                            graceful = true;
-                                            break;
-                                        }
-                                    default:
-                                        builder.append(c);
-                                }
-                                if (graceful) break;
-                            } while (reader.isReadable());
-                            if (!graceful) {
-                                nagger.nag("Special placeholder in " + str + " wasn't closed off! " +
-                                        "Was it a msitake or did you forget to escape the '%' symbol?");
-                            }
-
-                            IPlaceholder<?> parsed = ((ParsingNagger) nagger).context().parse(builder.toString());
-                            if (parsed != null) bundle.add(parsed);
-
                             builder.setLength(0);
                         }
                         break;
@@ -427,8 +430,7 @@ public class StringBundle extends ArrayList<Object> implements CtxPlaceholder<St
                             bundle.add(builder.toString());
                             builder.setLength(0);
                         }
-                        c = reader.readChar();
-                        if (c == '}') {
+                        if ((c = reader.readChar()) == '}') {
                             if (currentIndex == args.length) {
                                 throw new IllegalArgumentException("Too few arguments given!");
                             }
@@ -468,9 +470,28 @@ public class StringBundle extends ArrayList<Object> implements CtxPlaceholder<St
     }
 
     @Override
-    public StringBundle clone() {
-        StringBundle sb = (StringBundle) super.clone();
-        sb.addAll(this);
-        return sb;
+    public StringBundle get() {
+        return this;
+    }
+
+    @Override
+    public boolean isAnimated() {
+        for (Object o : this) {
+            if (o instanceof IAnimatable<?> && ((IAnimatable) o).isAnimated()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean tick() {
+        boolean result = false;
+        for (Object o : this) {
+            if (o instanceof IAnimatable<?>) {
+                result |= ((IAnimatable<?>) o).tick();
+            }
+        }
+        return result;
     }
 }

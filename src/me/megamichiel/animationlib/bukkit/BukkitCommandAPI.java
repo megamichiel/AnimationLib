@@ -22,7 +22,6 @@ import org.bukkit.help.HelpTopic;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 
-import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
@@ -30,10 +29,10 @@ import java.util.function.Supplier;
 
 import static org.bukkit.Bukkit.getServer;
 
-public class BukkitCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Command> {
+public class BukkitCommandAPI extends BaseCommandAPI<CommandSender, Command> {
 
     public static BukkitCommandAPI getInstance() {
-        return (BukkitCommandAPI) BaseCommandAPI.<Plugin, CommandSender, Command>getInstance();
+        return (BukkitCommandAPI) BaseCommandAPI.<CommandSender, Command>getInstance();
     }
 
     private static final Supplier<CommandMap> DUMMY = LazyValue.of(() -> new SimpleCommandMap(getServer()));
@@ -141,9 +140,9 @@ public class BukkitCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
     }
 
     @Override
-    public CommandSubscription<Command> registerCommand(Plugin plugin, Command command) {
-        getCommandMap().register(plugin.getName(), command);
-        HelpMap helpMap = plugin.getServer().getHelpMap();
+    public CommandSubscription<Command> registerCommand(String plugin, Command command) {
+        getCommandMap().register(plugin, command);
+        HelpMap helpMap = Bukkit.getHelpMap();
         helpMap.addTopic(new GenericCommandHelpTopic(command));
         for (String alias : command.getAliases()) {
             helpMap.addTopic(new CommandAliasHelpTopic(alias, command.getLabel(), helpMap));
@@ -152,7 +151,7 @@ public class BukkitCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
     }
 
     @Override
-    public CommandSubscription<Command> registerCommand(Plugin plugin, CommandInfo command) {
+    public CommandSubscription<Command> registerCommand(String plugin, CommandInfo command) {
         return registerCommand(plugin, new Command(command.name(), command.desc(),
                 command.usage(), Arrays.asList(command.aliases())) {
             String permission = command.permission(), permMessage = command.permissionMessage();
@@ -162,8 +161,7 @@ public class BukkitCommandAPI extends BaseCommandAPI<Plugin, CommandSender, Comm
                     sender.sendMessage(permMessage != null ? permMessage : ChatColor.RED + "You don't have permission for that!");
                     return true;
                 }
-                command.execute(new CommandContext<>(
-                        BukkitCommandAPI.this, sender, this, label, args));
+                command.execute(new CommandContext<>(BukkitCommandAPI.this, sender, this, label, args));
                 return true;
             }
 

@@ -3,7 +3,7 @@ package me.megamichiel.animationlib.bungee.category;
 import me.megamichiel.animationlib.Nagger;
 import me.megamichiel.animationlib.bungee.AnimLibPlugin;
 import me.megamichiel.animationlib.bungee.RegisteredPlaceholder;
-import me.megamichiel.animationlib.config.AbstractConfig;
+import me.megamichiel.animationlib.config.ConfigSection;
 import me.megamichiel.animationlib.config.ConfigManager;
 import me.megamichiel.animationlib.config.type.YamlConfig;
 import me.megamichiel.animationlib.placeholder.StringBundle;
@@ -32,10 +32,10 @@ public class JavaScriptCategory extends PlaceholderCategory {
         manager.saveDefaultConfig(() -> plugin.getResourceAsStream("javascript_placeholders.yml"));
         YamlConfig config = manager.getConfig();
         config.values().entrySet().stream()
-                .filter(entry -> entry.getValue() instanceof AbstractConfig)
+                .filter(entry -> entry.getValue() instanceof ConfigSection)
                 .forEach(entry -> {
                     String key = entry.getKey();
-                    AbstractConfig value = (AbstractConfig) entry.getValue();
+                    ConfigSection value = (ConfigSection) entry.getValue();
                     String script = value.getString("script"),
                             trueResult = value.getString("true-result"),
                             falseResult = value.getString("false-result");

@@ -1,12 +1,9 @@
 package me.megamichiel.animationlib.bungee;
 
 import me.megamichiel.animationlib.AnimLib;
-import me.megamichiel.animationlib.config.AbstractConfig;
 import me.megamichiel.animationlib.config.ConfigManager;
 import me.megamichiel.animationlib.config.type.YamlConfig;
-import me.megamichiel.animationlib.placeholder.Formula;
 import me.megamichiel.animationlib.placeholder.StringBundle;
-import me.megamichiel.animationlib.placeholder.ctx.ParsingContext;
 import me.megamichiel.animationlib.util.db.DataBase;
 import me.megamichiel.animationlib.util.pipeline.Pipeline;
 import net.md_5.bungee.api.plugin.Event;
@@ -14,11 +11,6 @@ import net.md_5.bungee.api.plugin.Plugin;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static me.megamichiel.animationlib.placeholder.StringBundle.colorAmpersands;
@@ -28,7 +20,7 @@ public class AnimLibPlugin extends Plugin implements AnimLib<Event> {
     private String booleanTrue, booleanFalse;
     private final long startTime = System.currentTimeMillis();
 
-    private final BungeeCommandAPI commandAPI = new BungeeCommandAPI();
+    private final BungeeCommandAPI commandAPI = new BungeeCommandAPI(this);
 
     @Override
     public void onLoad() {

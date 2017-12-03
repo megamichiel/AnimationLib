@@ -4,6 +4,7 @@ import me.megamichiel.animationlib.Nagger;
 import me.megamichiel.animationlib.config.AbstractConfig;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -12,8 +13,10 @@ import java.util.stream.Stream;
  * A class that moves through multiple values using 'frames'
  *
  * @param <E> the type of this animatable
+ * @deprecated use {@link AbsAnimatable}
  */
-public abstract class Animatable<E> extends ArrayList<E> {
+@Deprecated
+public abstract class Animatable<E> extends ArrayList<E> implements IAnimatable<E> {
 
     public static <E> Animatable<E> of(E def, BiFunction<Nagger, String, E> func) {
         return new Animatable<E>() {
@@ -32,11 +35,8 @@ public abstract class Animatable<E> extends ArrayList<E> {
     public static List<Animatable<?>> filterAnimated(Animatable<?>... animatables) {
         return Stream.of(animatables).filter(Animatable::isAnimated).collect(Collectors.toList());
     }
-    
-    private static final long serialVersionUID = -7324365301382371283L;
-    private static final Random random = new Random();
 
-    private int frame = 0;
+    private int frame = 0, interval, tick;
     protected E defaultValue;
     protected boolean isRandom;
 
@@ -53,41 +53,59 @@ public abstract class Animatable<E> extends ArrayList<E> {
     }
 
     /**
-     * Returns the value at the current frame
-     *
-     * @return the value at the current frame, or {@link #defaultValue()} if this Animatable is empty
-     */
-    public E get() {
-        return isEmpty() ? defaultValue() : get(frame);
-    }
-
-    /**
      * @return whether {@link #size()} is > 1
      */
+    @Override
     public boolean isAnimated() {
         return size() > 1;
     }
 
     /**
-     * Returns the value retrieved by {@link #get()}, and moves to the next frame
+     * Returns the value at the current frame
+     *
+     * @return the value at the current frame, or {@link #defaultValue()} if this Animatable is empty
      */
+    @Override
+    public E get() {
+        return isEmpty() ? defaultValue() : get(frame);
+    }
+
+    /**
+     * Returns the value retrieved by {@link #get()}, and moves to the next frame
+     *
+     * @deprecated {@link #tick()} should be used
+     */
+    @Deprecated
     public E next() {
-        E current = get();
-        switch (size()) {
-            case 0: case 1: return current;
-            case 2:
-                frame = 1 - frame; // Ezpz 2 frames
-                return current;
-            default:
-                if (isRandom) {
-                    // No frames twice in a row ;3
-                    int size = size(), prev = frame;
-                    do {
-                        frame = random.nextInt(size);
-                    } while (frame == prev);
-                } else if (++frame == size()) frame = 0;
-                return current;
+        E value = get();
+        tick();
+        return value;
+    }
+
+    @Override
+    public boolean tick() {
+        if (--tick < 0) {
+            tick = interval;
+            int size = size();
+            switch (size) {
+                case 2:
+                    frame = 1 - frame; // Ezpz 2 frames
+                case 0: case 1:
+                    break;
+                default:
+                    if (isRandom) {
+                        // No frames twice in a row ;3
+                        int prev = frame;
+                        do {
+                            frame = ThreadLocalRandom.current().nextInt(size);
+                        } while (frame == prev);
+                    } else if (++frame >= size) {
+                        frame = 0;
+                    }
+            }
+            return true;
         }
+        return false;
     }
 
     /**
@@ -141,6 +159,76 @@ public abstract class Animatable<E> extends ArrayList<E> {
         return false;
     }
 
+    public void setDelay(int delay) {
+        interval = tick = Math.max(delay, 0);
+    }
+
+    public boolean load(Nagger nagger, String path, AbstractConfig section) {
+        Map<Integer, Object> values = new HashMap<>();
+        int highest = 1;
+        List<String> errors = new ArrayList<>();
+        for (String id : section.keys()) {
+            switch (id) {
+                case "random":
+                    isRandom = section.getBoolean(id);
+                case "delay":
+                    break;
+                default:
+                    Object value = getValue(nagger, section, id);
+                    if (value == null) {
+                        continue;
+                    }
+                    for (String item : id.split(",")) {
+                        item = item.trim();
+                        try {
+                            int num = Integer.parseInt(item);
+                            if (num > 0) {
+                                if (num > highest) {
+                                    highest = num;
+                                }
+                                values.put(num, value);
+                            }
+                        } catch (NumberFormatException ex) {
+                            int index = item.indexOf('-');
+                            if (index > 0 && index < item.length() - 1) {
+                                try {
+                                    int min = Integer.parseInt(item.substring(0, index)),
+                                            max = Integer.parseInt(item.substring(index + 1));
+                                    if (max < min) {
+                                        errors.add("Max < Min at " + item + "!");
+                                        continue;
+                                    }
+                                    if (max > highest) {
+                                        highest = max;
+                                    }
+                                    for (int i = min; i <= max; i++) {
+                                        values.put(i, value);
+                                    }
+                                } catch (NumberFormatException ex2) {
+                                    errors.add("Invalid number: " + item + '!');
+                                }
+                            }
+                        }
+                    }
+            }
+        }
+        errors.forEach(nagger::nag);
+        Object last = null;
+        for (int i = 1; i <= highest; i++) {
+            Object o = values.get(i);
+            if (o != null) {
+                last = o;
+            } else if (last == null) {
+                nagger.nag("No frame specified at frame " + i + " in " + path + "!");
+            }
+            E e = convert(nagger, last);
+            if (e != null) {
+                add(e);
+            }
+        }
+        return true;
+    }
+
     /**
      * Loads this Animatable from <i>section</i> with key <i>key</i>
      *
@@ -154,72 +242,21 @@ public abstract class Animatable<E> extends ArrayList<E> {
     public boolean load(Nagger nagger, AbstractConfig section, String key, E defaultValue) {
         this.defaultValue = defaultValue;
         if (section.isSection(key) && (!isSection() || section.getBoolean("animate-" + key))) {
-            AbstractConfig sec = section.getSection(key);
-            Map<Integer, Object> values = new HashMap<>();
-            int highest = 1;
-            List<String> errors = new ArrayList<>();
-            for (String id : sec.keys()) {
-                if ("random".equals(id)) {
-                    isRandom = sec.getBoolean(id);
-                    continue;
-                }
-                Object value = getValue(nagger, sec, id);
-                if (value == null) continue;
-                for (String item : id.split(",")) {
-                    item = item.trim();
-                    try {
-                        int num = Integer.parseInt(item);
-                        if (num > 0) {
-                            if (num > highest) highest = num;
-                            values.put(num, value);
-                        }
-                    } catch (NumberFormatException ex) {
-                        int index = item.indexOf('-');
-                        if (index > 0 && index < item.length() - 1) {
-                            try {
-                                int min = Integer.parseInt(item.substring(0, index)),
-                                        max = Integer.parseInt(item.substring(index + 1));
-                                if (max < min) {
-                                    errors.add("Max < Min at " + item + "!");
-                                    continue;
-                                }
-                                if (max > highest) highest = max;
-                                for (int i = min; i <= max; i++) values.put(i, value);
-                            } catch (NumberFormatException ex2) {
-                                errors.add("Invalid number: " + item + '!');
-                            }
-                        }
-                    }
-                }
-            }
-            errors.forEach(nagger::nag);
-            Object last = null;
-            for (int i = 1; i <= highest; i++) {
-                Object o = values.get(i);
-                if (o != null) last = o;
-                else if (last == null)
-                    nagger.nag("No frame specified at " + i + " in " + key + "!");
-                E e = convert(nagger, last);
-                if (e != null) add(e);
-            }
-            return true;
+            return load(nagger, key, section.getSection(key));
         }
         Object value = getValue(nagger, section, key);
         if (value != null) {
             E converted = convert(nagger, value);
-            if (converted != null) add(converted);
-            return true;
+            if (converted != null) {
+                add(converted);
+                return true;
+            }
         }
         return false;
     }
 
     protected Object getValue(Nagger nagger, AbstractConfig section, String key) {
         return section.getString(key);
-    }
-
-    @Override
-    public Animatable<E> clone() {
-        return (Animatable<E>) super.clone();
     }
 
     public void copyTo(Animatable<E> other) {

@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
+import java.util.function.Function;
 
 public class ReflectClass {
 
@@ -296,6 +297,10 @@ public class ReflectClass {
             }
         }
 
+        public void compute(Object instance, Function<Object, ?> function) throws ReflectException {
+            set(instance, function.apply(get(instance)));
+        }
+
         public Object getStatic() throws ReflectException {
             return get(null);
         }
@@ -371,6 +376,10 @@ public class ReflectClass {
 
         public void setStatic(double value) throws ReflectException {
             set(null, value);
+        }
+
+        public void computeStatic(Function<Object, ?> function) throws ReflectException {
+            set(null, function.apply(get(null)));
         }
     }
 

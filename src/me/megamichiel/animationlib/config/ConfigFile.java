@@ -3,14 +3,14 @@ package me.megamichiel.animationlib.config;
 import java.io.*;
 import java.util.function.Supplier;
 
-public class ConfigManager<C extends AbstractConfig> {
+public class ConfigFile<C extends ConfigSection> {
 
-    public static <C extends AbstractConfig> ConfigManager<C> of(Supplier<C> configSupplier) {
-        return new ConfigManager<>(configSupplier);
+    public static <C extends ConfigSection> ConfigFile<C> of(Supplier<C> configSupplier) {
+        return new ConfigFile<>(configSupplier);
     }
 
-    public static <C extends AbstractConfig> C quickLoad(Supplier<C> configSupplier, File file) throws ConfigException {
-        return new ConfigManager<>(configSupplier).file(file).getConfig();
+    public static <C extends ConfigSection> C quickLoad(Supplier<C> configSupplier, File file) throws ConfigException {
+        return new ConfigFile<>(configSupplier).file(file).getConfig();
     }
 
     private final Supplier<C> configSupplier;
@@ -18,11 +18,11 @@ public class ConfigManager<C extends AbstractConfig> {
     private File configFile;
     private C config;
 
-    public ConfigManager(Supplier<C> configSupplier) {
+    public ConfigFile(Supplier<C> configSupplier) {
         this.configSupplier = configSupplier;
     }
 
-    public ConfigManager<C> file(File file) {
+    public ConfigFile<C> file(File file) {
         configFile = file;
         return this;
     }

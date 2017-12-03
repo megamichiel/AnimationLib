@@ -1,7 +1,7 @@
 package me.megamichiel.animationlib.util.db;
 
 import me.megamichiel.animationlib.AnimLib;
-import me.megamichiel.animationlib.config.AbstractConfig;
+import me.megamichiel.animationlib.config.ConfigSection;
 import me.megamichiel.animationlib.placeholder.StringBundle;
 
 import javax.script.*;
@@ -37,14 +37,14 @@ public class SQLHandler implements Runnable {
         return refreshDelay;
     }
 
-    public void load(AbstractConfig section) {
+    public void load(ConfigSection section) {
         entries.clear();
         if (section != null) {
             refreshDelay = Math.max(section.getInt("refresh-delay", 1), 5);
             section.forEach((key, value) -> {
-                if (value instanceof AbstractConfig) {
+                if (value instanceof ConfigSection) {
                     try {
-                        entries.put(section.getOriginalKey(key), new Entry((AbstractConfig) value));
+                        entries.put(section.getOriginalKey(key), new Entry((ConfigSection) value));
                     } catch (IllegalArgumentException e) {
                         lib.nag("Failed to load sql query " + key + "!");
                         lib.nag(e);
@@ -120,7 +120,7 @@ public class SQLHandler implements Runnable {
         private final CompiledScript script;
         private final Map<Object, Session> sessions = new ConcurrentHashMap<>();
 
-        Entry(AbstractConfig section) throws IllegalArgumentException {
+        Entry(ConfigSection section) throws IllegalArgumentException {
             String id = section.getString("database"),
                    query = section.getString("query"),
                    def = section.getString("default", "<loading>");
@@ -176,8 +176,9 @@ public class SQLHandler implements Runnable {
                     try (ResultSet res = sm.executeQuery(query.toString(player))) {
                         Bindings b = engine.createBindings();
                         b.put("sql", res);
-                        sessions.computeIfAbsent(player, p -> new Session(null, 0))
-                                .update(String.valueOf(script.eval(b)), lifespan);
+                        String value = String.valueOf(script.eval(b));
+                        sessions.compute(player, (p, session) -> session == null
+                                ? new Session(value, lifespan) : session.update(value, lifespan));
                         return true;
                     }
                 }
@@ -194,8 +195,9 @@ public class SQLHandler implements Runnable {
         String get(Object player) {
             Session session = sessions.computeIfAbsent(player, p ->
                     new Session(def.toString(p), lifespan));
-            if (session.lifespan > 0 && --session.lifespan == 0)
+            if (session.lifespan > 0 && --session.lifespan == 0) {
                 sessions.remove(player);
+            }
             return session.value;
         }
 
@@ -214,9 +216,10 @@ public class SQLHandler implements Runnable {
             this.lifespan = lifespan;
         }
 
-        void update(String value, int lifespan) {
+        Session update(String value, int lifespan) {
             this.value = value;
             this.lifespan = lifespan;
+            return this;
         }
     }
 }

@@ -1,5 +1,6 @@
 package me.megamichiel.animationlib.bukkit.nbt;
 
+import me.megamichiel.animationlib.util.collect.ConcurrentArrayList;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -9,6 +10,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -27,58 +29,74 @@ public class NBTUtil {
 
     private final Class<? extends ItemStack> itemClass;
     private final Constructor<? extends ItemStack> itemConstructor;
-    private final Field handleField, tagField, mapField, listField, unhandledField;
+    private final Field handle, tag, map, list, type, unhandledTags;
     private final Constructor<?> tagConstructor, listConstructor;
     private final Map<Class<?>, Modifier<?>> modifiers = new HashMap<>(),
                                              resolved  = new HashMap<>();
     private final String nbtPath;
 
-    private final Method parseMethod;
+    private final Method getTypeId, parse, applyToItem;
 
     {
         Class<? extends ItemStack> itemClass;
         Constructor<? extends ItemStack> itemConstructor;
-        Field handleField, tagField, mapField, listField, unhandledField;
+        Field handle, tag, map, list, type, unhandledTags;
         Constructor<?> tagConstructor, listConstructor;
         String nbtPath;
-        Method parseMethod;
+        Method getTypeId, parse, applyToItem;
         try {
+            Field modifiers = Field.class.getDeclaredField("modifiers");
+            modifiers.setAccessible(true);
+
             itemClass = Class.forName(Bukkit.getServer().getClass().getPackage().getName()
                             + ".inventory.CraftItemStack").asSubclass(ItemStack.class);
             (itemConstructor = itemClass.getDeclaredConstructor(ItemStack.class)).setAccessible(true);
-            (handleField = itemClass.getDeclaredField("handle")).setAccessible(true);
-            (tagField = handleField.getType().getDeclaredField("tag")).setAccessible(true);
-            (mapField = tagField.getType().getDeclaredField("map")).setAccessible(true);
-            tagConstructor = tagField.getType().getConstructor();
-            nbtPath = tagField.getType().getName().replace("Compound", "");
-            Class<?> list = Class.forName(tagField.getType().getName().replace("Compound", "List"));
-            listConstructor = list.getConstructor();
-            (listField = list.getDeclaredField("list")).setAccessible(true);
+            (handle = itemClass.getDeclaredField("handle")).setAccessible(true);
+            (tag = handle.getType().getDeclaredField("tag")).setAccessible(true);
+            Class<?> tagClass = tag.getType();
+            (map = tagClass.getDeclaredField("map")).setAccessible(true);
+            modifiers.set(map, map.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
+            tagConstructor = tagClass.getConstructor();
+            nbtPath = tagClass.getName().replace("Compound", "");
+            Class<?> listClass = Class.forName(tagClass.getName().replace("Compound", "List"));
+            listConstructor = listClass.getConstructor();
+            (list = listClass.getDeclaredField("list")).setAccessible(true);
+            (type = listClass.getDeclaredField("type")).setAccessible(true);
+            getTypeId = listClass.getSuperclass().getDeclaredMethod("getTypeId");
+            /* Field is not final, but to stay future-proof */
+            modifiers.set(list, list.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
 
-            (unhandledField = Class.forName(itemClass.getPackage().getName() + ".CraftMetaItem")
+
+            (unhandledTags = Class.forName(itemClass.getPackage().getName() + ".CraftMetaItem")
                     .getDeclaredField("unhandledTags")).setAccessible(true);
 
-            parseMethod = Class.forName(list.getPackage().getName() + ".MojangsonParser").getDeclaredMethod("parse", String.class);
+            parse = Class.forName(listClass.getPackage().getName() + ".MojangsonParser").getDeclaredMethod("parse", String.class);
+
+            (applyToItem = Class.forName(itemClass.getPackage().getName() + ".CraftMetaItem")
+                    .getDeclaredMethod("applyToItem", tagClass)).setAccessible(true);
         } catch (Exception ex) {
-            System.err.println("[AnimatedMenu] Couldn't find itemstack handle, no nbt support ;c");
+            System.err.println("[AnimationLib] Couldn't find itemstack handle, no nbt support ;c");
             itemClass = null;
             tagConstructor = listConstructor = itemConstructor = null;
-            handleField = tagField = mapField = listField = unhandledField = null;
+            handle = tag = map = list = type = unhandledTags = null;
             nbtPath = null;
-            parseMethod = null;
+            getTypeId = parse = applyToItem = null;
         }
         this.itemClass = itemClass;
         this.itemConstructor = itemConstructor;
-        this.handleField = handleField;
-        this.tagField = tagField;
-        this.mapField = mapField;
-        this.listField = listField;
-        this.unhandledField = unhandledField;
+        this.handle = handle;
+        this.tag = tag;
+        this.map = map;
+        this.list = list;
+        this.type = type;
+        this.unhandledTags = unhandledTags;
         this.tagConstructor = tagConstructor;
         this.listConstructor = listConstructor;
         this.nbtPath = nbtPath;
 
-        this.parseMethod = parseMethod;
+        this.getTypeId = getTypeId;
+        this.parse = parse;
+        this.applyToItem = applyToItem;
 
         Modifier<Boolean> mod = modifier(Boolean.class);
         TRUE = mod.wrap(true);
@@ -103,7 +121,7 @@ public class NBTUtil {
     public ItemStack setTag(ItemStack stack, Object tag) throws IllegalStateException {
         if (isSupported(stack = asNMS(stack))) {
             try {
-                tagField.set(handleField.get(stack), tag);
+                this.tag.set(handle.get(stack), tag);
             } catch (IllegalAccessException ex) {
                 throw new IllegalStateException(ex);
             }
@@ -111,9 +129,22 @@ public class NBTUtil {
         return stack;
     }
 
+    public Object toTag(ItemMeta meta) throws IllegalStateException {
+        if (meta == null) {
+            return null;
+        }
+        try {
+            Object tag = tagConstructor.newInstance(emptyArray);
+            applyToItem.invoke(meta, tag);
+            return tag;
+        } catch (Exception ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
     public Object parse(String text) {
         try {
-            return parseMethod.invoke(null, text);
+            return parse.invoke(null, text);
         } catch (Exception ex) {
             return null;
         }
@@ -127,11 +158,56 @@ public class NBTUtil {
         }
     }
 
+    public Object createConcurrentTag() {
+        try {
+            Object tag = tagConstructor.newInstance(emptyArray);
+            map.set(tag, new ConcurrentHashMap<>());
+            return tag;
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
     public Object createList() {
         try {
             return listConstructor.newInstance(emptyArray);
         } catch (Exception ex) {
             return null;
+        }
+    }
+
+    public Object createList(byte type) {
+        try {
+            Object list = listConstructor.newInstance(emptyArray);
+            this.type.setByte(list, type);
+            return list;
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    public void setListType(Object list, byte type) throws IllegalStateException {
+        try {
+            this.type.setByte(list, type);
+        } catch (Exception ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    public void identifyListType(Object list) throws IllegalStateException {
+        try {
+            List<Object> handle = (List<Object>) this.list.get(list);
+            type.setByte(list, handle.isEmpty() ? 0 : (byte) getTypeId.invoke(handle.get(0)));
+        } catch (Exception ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    public byte getTypeId(Object nbt) throws IllegalStateException {
+        try {
+            return (byte) getTypeId.invoke(nbt);
+        } catch (Exception ex) {
+            throw new IllegalStateException(ex);
         }
     }
 
@@ -141,7 +217,7 @@ public class NBTUtil {
 
     public Object getTag(ItemStack stack) throws IllegalStateException {
         try {
-            return tagField.get(handleField.get(stack));
+            return tag.get(handle.get(stack));
         } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }
@@ -149,9 +225,11 @@ public class NBTUtil {
 
     public Object getOrCreateTag(ItemStack stack) throws IllegalStateException {
         try {
-            Object handle = handleField.get(stack);
-            Object tag = tagField.get(handle);
-            if (tag == null) tagField.set(handle, tag = tagConstructor.newInstance(emptyArray));
+            Object handle = this.handle.get(stack),
+                      tag = this.tag.get(handle);
+            if (tag == null) {
+                this.tag.set(handle, tag = tagConstructor.newInstance(emptyArray));
+            }
             return tag;
         } catch (Exception ex) {
             throw new IllegalStateException(ex);
@@ -160,7 +238,7 @@ public class NBTUtil {
 
     public Map<String, Object> getMap(Object tag) throws IllegalStateException {
         try {
-            return (Map<String, Object>) mapField.get(tag);
+            return (Map<String, Object>) map.get(tag);
         } catch (IllegalAccessException ex) {
             throw new IllegalStateException(ex);
         }
@@ -168,15 +246,39 @@ public class NBTUtil {
 
     public Map<String, Object> getMap(ItemMeta meta) throws IllegalStateException {
         try {
-            return (Map<String, Object>) unhandledField.get(meta);
+            return (Map<String, Object>) unhandledTags.get(meta);
         } catch (IllegalAccessException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    public Map<String, Object> getConcurrentMap(Object tag) throws IllegalStateException {
+        try {
+            Map<String, Object> map = (Map<String, Object>) this.map.get(tag);
+            if (map.getClass() != ConcurrentHashMap.class) {
+                this.map.set(tag, map = new ConcurrentHashMap<>(map));
+            }
+            return map;
+        } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }
     }
 
     public List<Object> getList(Object list) throws IllegalStateException {
         try {
-            return (List<Object>) listField.get(list);
+            return (List<Object>) this.list.get(list);
+        } catch (IllegalAccessException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    public List<Object> getConcurrentList(Object list) throws IllegalStateException {
+        try {
+            List<Object> value = (List<Object>) this.list.get(list);
+            if (value.getClass() != ConcurrentArrayList.class) {
+                this.list.set(list, value = new ConcurrentArrayList<>(value));
+            }
+            return value;
         } catch (IllegalAccessException ex) {
             throw new IllegalStateException(ex);
         }
@@ -184,27 +286,44 @@ public class NBTUtil {
 
     public Map<String, Object> getOrCreateTagMap(ItemStack stack) throws IllegalStateException {
         try {
-            Object handle = handleField.get(stack);
-            Object tag = tagField.get(handle);
-            if (tag == null) tagField.set(handle, tag = tagConstructor.newInstance(emptyArray));
-            return (Map<String, Object>) mapField.get(tag);
+            Object handle = this.handle.get(stack);
+            Object tag = this.tag.get(handle);
+            if (tag == null) this.tag.set(handle, tag = tagConstructor.newInstance(emptyArray));
+            return (Map<String, Object>) map.get(tag);
         } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }
     }
 
-    public Map<String, Object> getTagMap(ItemStack stack) throws IllegalArgumentException {
+    public Map<String, Object> getTagMap(ItemStack stack) throws IllegalStateException {
         try {
-            return (Map<String, Object>) mapField.get(tagField.get(handleField.get(stack)));
+            return (Map<String, Object>) map.get(tag.get(handle.get(stack)));
+        } catch (Exception ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    public Map<String, Object> getConcurrentTagMap(ItemStack stack) throws IllegalStateException {
+        try {
+            Object tag = this.tag.get(handle.get(stack));
+            Map<String, Object> map = (Map<String, Object>) this.map.get(tag);
+            if (map.getClass() != ConcurrentHashMap.class) {
+                this.map.set(tag, map = new ConcurrentHashMap<>(map));
+            }
+            return map;
         } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }
     }
 
     public Object cloneTag(Object tag) throws IllegalStateException {
-        Object clone = createTag();
-        getMap(clone).putAll(getMap(tag));
-        return clone;
+        try {
+            Object clone = tagConstructor.newInstance(emptyArray);
+            ((Map) map.get(clone)).putAll((Map) map.get(tag));
+            return clone;
+        } catch (Exception ex) {
+            throw new IllegalStateException(ex);
+        }
     }
 
     public Map<String, Object> unwrap(Map<String, Object> map) throws NoSuchElementException, IllegalStateException {
@@ -271,7 +390,7 @@ public class NBTUtil {
             data = Map.class;
             converter = (tag, value) -> {
                 try {
-                    ((Map) mapField.get(tag)).putAll((Map) value);
+                    ((Map) map.get(tag)).putAll((Map) value);
                 } catch (IllegalAccessException ex) {
                     throw new IllegalStateException(ex);
                 }
@@ -283,9 +402,9 @@ public class NBTUtil {
             converter = (tag, value) -> {
                 try {
                     if (value instanceof Collection) {
-                        ((List) listField.get(tag)).addAll((Collection) value);
+                        ((List) list.get(tag)).addAll((Collection) value);
                     } else {
-                        List list = (List) listField.get(tag);
+                        List list = (List) this.list.get(tag);
                         ((Iterable) value).forEach(list::add);
                     }
                 } catch (IllegalAccessException ex) {

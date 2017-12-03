@@ -1,7 +1,7 @@
 package me.megamichiel.animationlib.util.db;
 
 import me.megamichiel.animationlib.Nagger;
-import me.megamichiel.animationlib.config.AbstractConfig;
+import me.megamichiel.animationlib.config.ConfigSection;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -42,11 +42,11 @@ public class DataBase {
         return byId.get(id);
     }
 
-    public static void load(Nagger nagger, AbstractConfig config) {
+    public static void load(Nagger nagger, ConfigSection config) {
         byId.clear();
         if (config != null) config.forEach((key, value) -> {
-            if (!(value instanceof AbstractConfig)) return;
-            AbstractConfig section = (AbstractConfig) value;
+            if (!(value instanceof ConfigSection)) return;
+            ConfigSection section = (ConfigSection) value;
             String   url = section.getString("url"),
                     user = section.getString("user"),
                     pass = section.getString("password");

@@ -5,12 +5,12 @@ import me.megamichiel.animationlib.util.Subscription;
 
 public class CommandSubscription<C> implements Subscription {
 
-    private final CommandAPI<?, ?, C> api;
+    private final CommandAPI<?, C> api;
     private final C command;
 
     protected boolean unsubscribed;
 
-    public CommandSubscription(CommandAPI<?, ?, C> api, C command) {
+    public CommandSubscription(CommandAPI<?, C> api, C command) {
         this.api = api;
         this.command = command;
     }

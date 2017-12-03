@@ -2,9 +2,8 @@ package me.megamichiel.animationlib.bukkit;
 
 import me.megamichiel.animationlib.bukkit.placeholder.MVdWPlaceholder;
 import me.megamichiel.animationlib.bukkit.placeholder.PapiPlaceholder;
-import me.megamichiel.animationlib.config.AbstractConfig;
+import me.megamichiel.animationlib.config.ConfigSection;
 import me.megamichiel.animationlib.placeholder.Formula;
-import me.megamichiel.animationlib.placeholder.IPlaceholder;
 import me.megamichiel.animationlib.placeholder.ctx.ParsingContext;
 import me.megamichiel.animationlib.util.db.SQLHandler;
 import me.megamichiel.animationlib.util.pipeline.Pipeline;
@@ -29,7 +28,7 @@ public class AnimLibPlaceholders implements BiFunction<Player, String, String> {
     }
 
     private final AnimLibPlugin plugin;
-    private final Map<String, IPlaceholder<String>> formulas = new HashMap<>();
+    private final Map<String, Formula> formulas = new HashMap<>();
     private final SQLHandler sql;
     private BukkitTask sqlTask;
     private Pipeline<? extends PlayerEvent> joinPipeline, quitPipeline;
@@ -39,7 +38,7 @@ public class AnimLibPlaceholders implements BiFunction<Player, String, String> {
         sql = new SQLHandler(plugin);
     }
 
-    void load(AbstractConfig config) {
+    void load(ConfigSection config) {
         formulas.clear();
         if (sqlTask != null) {
             sqlTask.cancel();
@@ -49,11 +48,11 @@ public class AnimLibPlaceholders implements BiFunction<Player, String, String> {
         String locale = config.getString("formula-locale");
         if (locale != null) Formula.setLocale(new Locale(locale));
         if (config.isSection("formulas")) {
-            AbstractConfig section = config.getSection("formulas");
+            ConfigSection section = config.getSection("formulas");
             section.forEach((key, value) -> {
                 Formula formula;
-                if (value instanceof AbstractConfig) {
-                    AbstractConfig sec = (AbstractConfig) value;
+                if (value instanceof ConfigSection) {
+                    ConfigSection sec = (ConfigSection) value;
                     String     val = sec.getString("value"),
                             format = sec.getString("format");
                     if (val == null) return;
@@ -77,7 +76,9 @@ public class AnimLibPlaceholders implements BiFunction<Player, String, String> {
                         plugin.nag("Failed to parse formula " + value + ": " + ex.getMessage());
                         return;
                     }
-                } else return;
+                } else {
+                    return;
+                }
                 formulas.put(section.getOriginalKey(key), formula);
             });
         }
@@ -93,7 +94,7 @@ public class AnimLibPlaceholders implements BiFunction<Player, String, String> {
     @Override
     public String apply(Player player, String arg) {
         if (arg.startsWith("formula_")) {
-            IPlaceholder<String> formula = formulas.get(arg.substring(8));
+            Formula formula = formulas.get(arg.substring(8));
             return formula == null ? null : formula.invoke(plugin, player);
         } else if (arg.startsWith("sql_")) {
             return sql.get(arg.substring(4), player);

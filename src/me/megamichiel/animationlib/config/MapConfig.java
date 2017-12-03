@@ -6,13 +6,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-public class MapConfig extends AbstractConfig implements Serializable {
+public class MapConfig extends ConfigSection implements Serializable {
 
     private static final long serialVersionUID = -2756209354518932499L;
 
     private final Map<String, String> mappedKeys = new HashMap<>();
     private final Map<String, Object> parent;
     private boolean caseInsensitive;
+
+    public int size() {
+        return parent.size();
+    }
 
     @Override
     public String getOriginalKey(String key) {
@@ -136,6 +140,11 @@ public class MapConfig extends AbstractConfig implements Serializable {
 
     @Override
     public void setAll(AbstractConfig config) {
+        parent.putAll(mapValues(config.toRawMap()));
+    }
+
+    @Override
+    public void setAll(ConfigSection config) {
         parent.putAll(mapValues(config.toRawMap()));
     }
 

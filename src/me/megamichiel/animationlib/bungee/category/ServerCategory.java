@@ -13,8 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerCategory extends PlaceholderCategory {
 
-    private static final long MB = 1024 * 1024;
-
     private final AnimLibPlugin plugin;
     private final Map<String, DateFormat> dateFormats = new ConcurrentHashMap<>();
 
@@ -26,10 +24,10 @@ public class ServerCategory extends PlaceholderCategory {
         put("uptime",    (n, p) -> plugin.uptime());
 
         Runtime runtime = Runtime.getRuntime();
-        put("ram_used",  (n, p) -> Long.toString((runtime.totalMemory() - runtime.freeMemory()) / MB));
-        put("ram_free",  (n, p) -> Long.toString(runtime.freeMemory() / MB));
-        put("ram_total", (n, p) -> Long.toString(runtime.totalMemory() / MB));
-        put("ram_max",   (n, p) -> Long.toString(runtime.maxMemory() / MB));
+        put("ram_used",  (n, p) -> Long.toString((runtime.totalMemory() - runtime.freeMemory()) >>> 20));
+        put("ram_free",  (n, p) -> Long.toString(runtime.freeMemory() >>> 20));
+        put("ram_total", (n, p) -> Long.toString(runtime.totalMemory() >>> 20));
+        put("ram_max",   (n, p) -> Long.toString(runtime.maxMemory() >>> 20));
     }
 
     @Override

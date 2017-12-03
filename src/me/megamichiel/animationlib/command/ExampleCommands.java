@@ -23,7 +23,7 @@ import java.util.List;
 
 public class ExampleCommands implements CommandAdapter {
 
-    public ExampleCommands(Plugin plugin) {
+    public ExampleCommands(String plugin) {
         AnimLibPlugin.getInstance().getCommandAPI().registerCommands(plugin, this);
     }
     
@@ -41,7 +41,7 @@ public class ExampleCommands implements CommandAdapter {
             sender.sendMessage(ChatColor.RED + "No player by name \"" + args[0] + "\" found!");
             return true;
         }
-        String suffix = ChatColor.RED + " > " + ChatColor.GREEN + Joiner.on(' ').join(Arrays.copyOfRange(args, 1, args.length));
+        String suffix = ChatColor.RED + " > " + ChatColor.GREEN + String.join(" ", Arrays.copyOfRange(args, 1, args.length));
         sender.sendMessage(ChatColor.GOLD + "To " + target.getName() + suffix);
         target.sendMessage(ChatColor.GOLD + "From " + sender.getName() + suffix);
         return true;
@@ -49,7 +49,7 @@ public class ExampleCommands implements CommandAdapter {
     
     @CommandHandler("messagenew")
     String newCommand(Player sender, String label, Player target, @Alias("message") String[] message) {
-        String suffix = ChatColor.RED + " > " + ChatColor.GREEN + Joiner.on(' ').join(message);
+        String suffix = ChatColor.RED + " > " + ChatColor.GREEN + String.join(" ", message);
         target.sendMessage(ChatColor.GOLD + "From " + sender.getName() + suffix);
 		return ChatColor.GOLD + "To " + target.getName() + suffix;
     }
@@ -73,14 +73,14 @@ public class ExampleCommands implements CommandAdapter {
     
     @CommandHandler("entities")
     String tellMehEntities(CommandSender sender, String label, @Alias("selector") EntitySelector selector) {
-        StringBuilder sb = new StringBuilder();
-        for (Iterator<Entity> it = selector.getEntities().iterator(); it.hasNext();) {
-            sb.append(it.next().getName());
-            if (it.hasNext())
-                sb.append(", ");
-        }
-        if (sb.length() == 0)
+        Iterator<Entity> it = selector.getEntities().iterator();
+        if (!it.hasNext()) {
             return ChatColor.RED + "No entities found :(";
+        }
+        StringBuilder sb = new StringBuilder(it.next().getName());
+        while (it.hasNext()) {
+            sb.append(", ").append(it.next());
+        }
         return ChatColor.GREEN + "Entities: " + sb.toString();
     }
     
@@ -91,18 +91,21 @@ public class ExampleCommands implements CommandAdapter {
             @Optional World world, double x, double y, double z,
             @Optional float yaw, @Optional float pitch) {
         List<Entity> entities;
-        if (target != null)
+        if (target != null) {
             entities = target.getEntities();
-        else entities = Collections.<Entity>singletonList((Player) sender); // Only optional if sender is a player, so casting is fine ;3
-        if (entities.isEmpty())
-        {
+        } else {
+            entities = Collections.singletonList((Player) sender); // Only optional if sender is a player, so casting is fine ;3
+        }
+        if (entities.isEmpty()) {
             return ChatColor.RED + "No entities found!";
         }
-		if (world == null)
-			world = sender instanceof Player ? ((Player) sender).getWorld() : Bukkit.getWorlds().get(0);
+		if (world == null) {
+            world = sender instanceof Player ? ((Player) sender).getWorld() : Bukkit.getWorlds().get(0);
+        }
 		Location loc = new Location(world, x, y, z, yaw, pitch);
-        for (Entity entity : entities)
+        for (Entity entity : entities) {
             entity.teleport(loc);
+        }
 		return null;
     }
 }

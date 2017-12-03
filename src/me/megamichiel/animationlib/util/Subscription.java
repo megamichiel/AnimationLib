@@ -7,8 +7,10 @@ public interface Subscription {
             boolean unsubscribed = false;
             @Override
             public void unsubscribe() {
-                unsubscriber.run();
-                unsubscribed = true;
+                if (!unsubscribed) {
+                    unsubscriber.run();
+                    unsubscribed = true;
+                }
             }
 
             @Override

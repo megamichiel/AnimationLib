@@ -4,14 +4,14 @@ import me.megamichiel.animationlib.command.BaseCommandAPI;
 
 public class CommandContext<S, C> {
 
-    private final BaseCommandAPI<?, S, C> api;
+    private final BaseCommandAPI<S, C> api;
 
     private final S sender;
     private final C command;
     private final String label;
     private final String[] args;
 
-    public CommandContext(BaseCommandAPI<?, S, C> api, S sender,
+    public CommandContext(BaseCommandAPI<S, C> api, S sender,
                           C command, String label, String[] args) {
         this.api = api;
         this.sender = sender;

@@ -34,7 +34,9 @@ public class StringReader {
     }
 
     public void skipChar() {
-        if (index < count) ++index;
+        if (index < count) {
+            ++index;
+        }
     }
 
     public void unread(int count) {
@@ -54,10 +56,10 @@ public class StringReader {
     }
 
     public void skipWhitespace() {
-        while (index < count) {
-            char c = chars[index];
-            if (c == ' ' || c == '\t') ++index;
-            else break;
+        for (char c; index < count; ++index) {
+            if ((c = chars[index]) != ' ' && c != '\t') {
+                break;
+            }
         }
     }
 

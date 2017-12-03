@@ -32,7 +32,7 @@ public class BungeePlaceholder implements IPlaceholder<String> {
 
     @Override
     public String invoke(Nagger nagger, Object who, PlaceholderContext ctx) {
-        return ctx != null ? ctx.invoke(who, identifier, this) : invoke(nagger, who);
+        return ctx == null ? invoke(nagger, who) : ctx.invoke(who, identifier, this);
     }
 
     private static final List<PlaceholderCategory> categories = new ArrayList<>();

@@ -12,8 +12,7 @@ public class NBTList implements Cloneable {
     public NBTList() {
         util = NBTUtil.getInstance();
         NBTUtil.Modifier<List> modifier = util.modifier(List.class);
-        handle = modifier.wrap(new ArrayList<>());
-        list = modifier.unwrap(handle);
+        list = modifier.unwrap(handle = modifier.wrap(new ArrayList<>()));
     }
 
     public NBTList(Object handle) {
@@ -37,8 +36,11 @@ public class NBTList implements Cloneable {
     }
 
     public void set(int index, Object value) {
-        if (value == null) list.remove(index);
-        else list.set(index, util.wrap(value));
+        if (value == null) {
+            list.remove(index);
+        } else {
+            list.set(index, util.wrap(value));
+        }
     }
 
     public void add(Object value) {

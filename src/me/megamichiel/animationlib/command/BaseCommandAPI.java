@@ -8,18 +8,17 @@ import me.megamichiel.animationlib.command.exec.CommandAdapter;
 import me.megamichiel.animationlib.command.exec.CommandContext;
 import me.megamichiel.animationlib.command.exec.ReflectCommandExecutor;
 import me.megamichiel.animationlib.util.Subscription;
-import org.apache.commons.lang.Validate;
 
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public abstract class BaseCommandAPI<P, S, C> implements CommandAPI<P, S, C> {
+public abstract class BaseCommandAPI<S, C> implements CommandAPI<S, C> {
 
     private static BaseCommandAPI instance;
 
-    public static <P, S, C> BaseCommandAPI<P, S, C> getInstance() {
+    public static <S, C> BaseCommandAPI<S, C> getInstance() {
         return instance;
     }
 
@@ -38,10 +37,13 @@ public abstract class BaseCommandAPI<P, S, C> implements CommandAPI<P, S, C> {
     public abstract void sendMessage(Object sender, String message);
 
     @Override
-    public List<CommandSubscription<C>> registerCommands(P plugin,
-                                                         CommandAdapter adapter) {
-        Validate.notNull(plugin, "plugin");
-        Validate.notNull(adapter, "adapter");
+    public List<CommandSubscription<C>> registerCommands(String plugin, CommandAdapter adapter) {
+        if (plugin == null) {
+            throw new NullPointerException("plugin");
+        }
+        if (adapter == null) {
+            throw new NullPointerException("adapter");
+        }
         List<ReflectCommandExecutor> list = new ArrayList<>();
         CommandHandler handler;
         Class<?> type = adapter.getClass();
@@ -108,8 +110,12 @@ public abstract class BaseCommandAPI<P, S, C> implements CommandAPI<P, S, C> {
 
     @Override
     public <T> Subscription registerDelegateArgument(Class<? super T> type, DelegateArgument<S, ? extends T> delegate) {
-        Validate.notNull(type, "type");
-        Validate.notNull(delegate, "delegate");
+        if (type == null) {
+            throw new NullPointerException("type");
+        }
+        if (delegate == null) {
+            throw new NullPointerException("delegate");
+        }
         delegateArguments.put(type, delegate);
         return new Subscription() {
             @Override
@@ -142,8 +148,12 @@ public abstract class BaseCommandAPI<P, S, C> implements CommandAPI<P, S, C> {
 
     @Override
     public <T> Subscription registerCommandResultHandler(Class<? extends T> clazz, CommandResultHandler<S, ? super T> handler) {
-        Validate.notNull(clazz, "clazz");
-        Validate.notNull(handler, "handler");
+        if (clazz == null) {
+            throw new NullPointerException("clazz");
+        }
+        if (handler == null) {
+            throw new NullPointerException("handler");
+        }
         resultHandlers.put(clazz, handler);
         return new Subscription() {
             @Override

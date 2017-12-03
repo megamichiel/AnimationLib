@@ -13,158 +13,73 @@ import java.util.function.Function;
 
 public abstract class AbstractConfig {
 
-    public void setIndent(int indent) {
-        if (indent < 2 || indent % 2 != 0)
-            throw new IllegalArgumentException("Indent must be a multiple of 2!");
-    }
+    public abstract void setIndent(int indent);
 
     public abstract String getOriginalKey(String key);
-
-    public void restoreKeys(boolean deep) {
-        Set<String> keys = keys();
-        for (String key : keys) {
-            String s = getOriginalKey(key);
-            Object o = get(key);
-            if (!s.equals(key)) {
-                set(key, null);
-                set(s, o);
-            }
-            if (deep && o instanceof AbstractConfig)
-                ((AbstractConfig) o).restoreKeys(true);
-        }
-    }
+    
+    public abstract void restoreKeys(boolean deep);
 
     public abstract void set(String path, Object value);
 
     public abstract void setAll(AbstractConfig config);
+    
+    public abstract void setAll(ConfigSection section);
 
     public abstract void setAll(Map<?, ?> map);
 
     public abstract Object get(String path);
 
-    public Object get(String path, Object def) {
-        Object o = get(path);
-        return o == null ? def : o;
-    }
+    public abstract Object get(String path, Object def);
 
-    public boolean isSet(String path) {
-        return get(path) != null;
-    }
+    public abstract boolean isSet(String path);
 
-    public void replace(String path, Function<Object, ?> func) {
-        Object val = get(path);
-        if (val != (val = func.apply(val))) {
-            set(path, val);
-        }
-    }
+    public abstract void replace(String path, Function<Object, ?> func);
 
-    public <T> T get(String path, Function<Object, T> func, T def) {
-        return Optional.ofNullable(get(path)).map(func).orElse(def);
-    }
+    public abstract <T> T get(String path, Function<Object, T> func, T def);
 
-    public String getString(String path, String def) {
-        return get(path, Object::toString, def);
-    }
+    public abstract String getString(String path, String def);
 
-    public String getString(String path) {
-        return getString(path, null);
-    }
+    public abstract String getString(String path);
 
-    public boolean isString(String path) {
-        Object o = get(path);
-        return o instanceof String || isPrimitiveWrapper(o);
-    }
+    public abstract boolean isString(String path);
 
-    public <E extends Enum<E>> E getEnum(String path, Class<E> type, E def) {
-        String s = getString(path);
-        if (s == null) return def;
-        try {
-            return Enum.valueOf(type, s.toLowerCase(Locale.ENGLISH).replace('-', '_'));
-        } catch (IllegalArgumentException ex) {
-            return def;
-        }
-    }
+    public abstract <E extends Enum<E>> E getEnum(String path, Class<E> type, E def);
 
-    public <E extends Enum<E>> E getEnum(String path, Class<E> type) {
-        return getEnum(path, type, null);
-    }
+    public abstract <E extends Enum<E>> E getEnum(String path, Class<E> type);
 
-    public int getInt(String path) {
-        return getInt(path, 0);
-    }
+    public abstract int getInt(String path);
 
-    public int getInt(String path, int def) {
-        Object o = get(path, def);
-        return o instanceof Number ? ((Number) o).intValue() : 0;
-    }
+    public abstract int getInt(String path, int def);
 
-    public boolean isInt(String path) {
-        return get(path) instanceof Number;
-    }
+    public abstract boolean isInt(String path);
 
-    public long getLong(String path) {
-        return getLong(path, 0L);
-    }
+    public abstract long getLong(String path);
 
-    public long getLong(String path, long def) {
-        Object o = get(path, def);
-        return o instanceof Number ? ((Number) o).longValue() : 0;
-    }
+    public abstract long getLong(String path, long def);
 
-    public double getDouble(String path) {
-        return getDouble(path, 0D);
-    }
+    public abstract double getDouble(String path);
 
-    public double getDouble(String path, double def) {
-        Object o = get(path, def);
-        return o instanceof Number ? ((Number) o).doubleValue() : 0;
-    }
+    public abstract double getDouble(String path, double def);
 
-    public boolean getBoolean(String path, boolean def) {
-        Object o = get(path, def);
-        return o instanceof Boolean && (Boolean) o;
-    }
+    public abstract boolean getBoolean(String path, boolean def);
 
-    public boolean getBoolean(String path) {
-        return getBoolean(path, false);
-    }
+    public abstract boolean getBoolean(String path);
 
-    public boolean isBoolean(String path) {
-        return get(path, null) instanceof Boolean;
-    }
+    public abstract boolean isBoolean(String path);
 
-    public boolean isSection(String path) {
-        return get(path) instanceof AbstractConfig;
-    }
+    public abstract boolean isSection(String path);
 
-    public AbstractConfig getSection(String path) {
-        Object o = get(path, null);
-        return o instanceof AbstractConfig ? (AbstractConfig) o : null;
-    }
+    public abstract AbstractConfig getSection(String path);
 
-    public boolean isList(String path) {
-        return get(path) instanceof List;
-    }
+    public abstract boolean isList(String path);
 
-    public List getList(String path) {
-        return get(path, silentCast(List.class), null);
-    }
+    public abstract List getList(String path);
 
-    public <T> List<T> getList(String path, Function<Object, T> func) {
-        List<?> list = getList(path);
-        List<T> res = new ArrayList<>();
-        if (list != null)
-            list.stream().map(func::apply).filter(Objects::nonNull).forEach(res::add);
-        return res;
-    }
+    public abstract <T> List<T> getList(String path, Function<Object, T> func);
 
-    public List<String> getStringList(String path) {
-        return getList(path, o -> o instanceof String || isPrimitiveWrapper(o) ? o.toString() : null);
-    }
+    public abstract List<String> getStringList(String path);
 
-    public List<AbstractConfig> getSectionList(String path) {
-        return getList(path, o -> o instanceof AbstractConfig ? (AbstractConfig) o : null);
-    }
+    public abstract List<ConfigSection> getSectionList(String path);
 
     public abstract Set<String> keys();
 
@@ -180,34 +95,18 @@ public abstract class AbstractConfig {
 
     public abstract void save(File file) throws IOException;
 
-    public void forEach(BiConsumer<String, Object> action) {
-        values().forEach(action);
-    }
+    public abstract void forEach(BiConsumer<String, Object> action);
 
-    public <T> void forEach(BiFunction<String, Object, T> func, BiConsumer<String, T> action) {
-        values().forEach((key, value) -> {
-            T mapped = func.apply(key, value);
-            if (mapped != null) action.accept(key, mapped);
-        });
-    }
+    public abstract <T> void forEach(BiFunction<String, Object, T> func, BiConsumer<String, T> action);
 
-    public void forEachKey(Consumer<String> action) {
-        keys().forEach(action);
-    }
+    public abstract void forEachKey(Consumer<String> action);
 
-    public <T> T loadAsClass(Class<T> clazz) throws ConfigurationSerializationException {
-        return new ConfigTypeSerializer(this).loadAsClass(clazz);
-    }
+    public abstract <T> T loadAsClass(Class<T> clazz) throws ConfigurationSerializationException;
 
-    public <T> T loadAsClass(Class<T> clazz,
-                             ConfigTypeSerializer.DeserializationContext... ctx)
-        throws ConfigurationSerializationException {
-        return new ConfigTypeSerializer(this).addDeserializationContext(ctx).loadAsClass(clazz);
-    }
+    public abstract <T> T loadAsClass(Class<T> clazz, ConfigTypeSerializer.DeserializationContext... ctx)
+        throws ConfigurationSerializationException;
 
-    public void saveObject(Object o) {
-        new ConfigTypeSerializer(this).saveObject(o);
-    }
+    public abstract void saveObject(Object o);
 
     public static boolean isPrimitiveWrapper(Object o) {
         return o instanceof Number || o instanceof Boolean || o instanceof Character;

@@ -25,20 +25,26 @@ public class Formula implements CtxPlaceholder<String> {
     }
 
     private static double getValue(Nagger nagger, Object who, Object o, PlaceholderContext ctx) {
-        if (o instanceof Double) return (Double) o;
-        if (o instanceof Formula) return ((Formula) o).compute(nagger, who, ctx);
+        if (o instanceof Double) {
+            return (Double) o;
+        }
+        if (o instanceof Formula) {
+            return ((Formula) o).compute(nagger, who, ctx);
+        }
         if (o instanceof IPlaceholder) {
             Object val = ((IPlaceholder) o).invoke(nagger, who, ctx);
             if (val instanceof Number) {
                 return ((Number) val).doubleValue();
             }
             try {
-                return Double.parseDouble(val.toString());
+                return val == null ? 0 : Double.parseDouble(val.toString());
             } catch (NumberFormatException ex) {
                 return 0;
             }
         }
-        if (o instanceof UnaryFunction) return ((UnaryFunction) o).compute(nagger, who, ctx);
+        if (o instanceof UnaryFunction) {
+            return ((UnaryFunction) o).compute(nagger, who, ctx);
+        }
         throw new IllegalArgumentException("Unknown object: " + o);
     }
 
@@ -111,26 +117,32 @@ public class Formula implements CtxPlaceholder<String> {
                     values.add(parse(reader, ctx, true));
                     break;
                 case ')':
-                    if (!subgroup) throw new IllegalArgumentException(
-                            "Unexpected ) in " + src + " at index " + reader.index());
+                    if (!subgroup) {
+                        throw new IllegalArgumentException("Unexpected ) in " + src + " at index " + reader.index());
+                    }
                     next = false;
                     break;
                 case '{':
-                    if (ctx == null)
+                    if (ctx == null) {
                         throw new IllegalArgumentException("Unknown character: " + c + " in "
-                            + reader.source() + " at index " + reader.index());
-                    if (!reader.isReadable())
-                        throw new IllegalArgumentException(src + " ends with a special placeholder character! Did you forget to escape it?");
-                    sb = new StringBuilder();
-                    while ((c = reader.readChar()) != '}') {
-                        sb.append(c);
-                        if (!reader.isReadable())
-                            throw new IllegalArgumentException("Special placeholder not closed off in " + src + "!");
+                                + reader.source() + " at index " + reader.index());
                     }
-                    IPlaceholder<?> placeholder = ctx.parse(sb.toString());
-                    if (placeholder == null)
-                        throw new IllegalArgumentException("Unknown special placeholder: " + sb + '!');
-                    values.add(placeholder);
+                    if (!reader.isReadable()) {
+                        throw new IllegalArgumentException(src + " ends with a special placeholder character! Did you forget to escape it?");
+                    }
+                    for (sb = new StringBuilder(); (c = reader.readChar()) != '}'; sb.append(c)) {
+                        if (!reader.isReadable()) {
+                            throw new IllegalArgumentException("Special placeholder not closed off in " + src + "!");
+                        }
+                    }
+                    IPlaceholder<?> parsed;
+                    String placeholder = sb.toString();
+                    for (ParsingContext context = ctx; (parsed = context.parse(placeholder)) == null; ) {
+                        if ((context = context.parent()) == null) {
+                            throw new IllegalArgumentException("Unknown special placeholder: " + placeholder + '!');
+                        }
+                    }
+                    values.add(parsed);
                     break;
                 default:
                     if ((c >= '0' && c <= '9') || c == '.') { // Numba
@@ -139,30 +151,31 @@ public class Formula implements CtxPlaceholder<String> {
                             sb.append(c);
                             if (!reader.isReadable()) break;
                         } while (((c = reader.readChar()) >= '0' && c <= '9') || c == '.');
-                        if ((c < '0' || c > '9') && c != '.')
+
+                        if ((c < '0' || c > '9') && c != '.') {
                             reader.unreadChar(); // Unread terminating non-digit
+                        }
                         values.add(Double.valueOf(sb.toString()));
                     } else {
                         Operator operator = null;
-                        for (Operator op : OPERATORS) if (op.id[0] == c) {
-                            if (op.id.length != 1) {
-                                if (reader.isReadable() && reader.readChar() != op.id[1]) {
-                                    reader.unreadChar();
-                                    continue;
+                        for (Operator op : OPERATORS) {
+                            if (op.id[0] == c) {
+                                if (op.id.length > 1) {
+                                    if (reader.isReadable() && reader.readChar() != op.id[1]) {
+                                        reader.unreadChar();
+                                        continue;
+                                    }
+                                    if (reader.isReadable() && op.id.length == 3 && reader.readChar() != op.id[2]) {
+                                        reader.unread(2);
+                                        continue;
+                                    }
                                 }
-                                if (reader.isReadable() && op.id.length == 3
-                                        && reader.readChar() != op.id[2]) {
-                                    reader.unread(2);
-                                    continue;
-                                }
+                                operator = op;
+                                break;
                             }
-                            operator = op;
-                            break;
                         }
                         if (operator != null) {
-                            if (last == null || operator.level > last.level)
-                                last = operator;
-                            values.add(operator);
+                            values.add(last == null || operator.level > last.level ? (last = operator) : operator);
                             break;
                         }
                         UnaryOperator unary = null;
@@ -191,7 +204,9 @@ public class Formula implements CtxPlaceholder<String> {
                                 values.add(parse(reader, ctx, true));
                             }
                             break;
-                        } else reader.readChar(); // Re-read the starting char
+                        } else {
+                            reader.readChar(); // Re-read the starting char
+                        }
                         throw new IllegalArgumentException("Unknown character: " + c + " in "
                                 + reader.source() + " at index " + reader.index());
                     }
@@ -199,35 +214,37 @@ public class Formula implements CtxPlaceholder<String> {
             }
         }
         Object o = getElement(reader.source(), values, last, ctx);
-        if (o instanceof Formula) return (Formula) o;
-        return new Formula(null, Collections.singletonList(o), ctx);
+        return o instanceof Formula ? (Formula) o : new Formula(null, ctx == null ? null : ctx.numberFormat(), o);
     }
 
     private static Object getElement(String src, List<Object> list,
                                      Operator op, ParsingContext ctx) {
         int size = list.size();
-        if (size == 0) throw new IllegalArgumentException("Empty group in " + src + "!");
-        Object first = list.get(0);
-        if (first instanceof Operator) {
-            if (size == 1)
-                throw new IllegalArgumentException(src + " only consists of an operator!");
-            if (first == SUBTRACT)
-                list.set(0, first = UNARY_OPERATORS[0]); // Negate
-            else throw new IllegalArgumentException(src + " starts with an operator!");
+        if (size == 0) {
+            throw new IllegalArgumentException("Empty group in " + src + "!");
         }
+        Object first = list.get(0);
         if (size == 1) {
-            if (first instanceof UnaryOperator)
+            if (first instanceof Operator || first instanceof UnaryOperator) {
                 throw new IllegalArgumentException(src + " only consists of an operator!");
+            }
             return first;
         }
-        if (list.get(size - 1) instanceof Operator)
+        if (first instanceof Operator) {
+            if (first == SUBTRACT) {
+                list.set(0, UNARY_OPERATORS[0]); // Negate
+            } else {
+                throw new IllegalArgumentException(src + " starts with an operator!");
+            }
+        }
+        if (list.get(size - 1) instanceof Operator) {
             throw new IllegalArgumentException(src + " ends with an operator!");
+        }
 
         Object left, right;
-        for (int i = size; i-- > 1;) {
-            left = list.get(i - 1);
-            right = list.get(i);
-            if (left instanceof Operator) {
+        for (int i = size; i > 1; ) {
+            right = list.get(--i);
+            if ((left = list.get(i - 1)) instanceof Operator) {
                 if (right instanceof Operator) {
                     if (right == SUBTRACT) {
                         list.set(i, UNARY_OPERATORS[0]); // Negate
@@ -236,67 +253,76 @@ public class Formula implements CtxPlaceholder<String> {
                     throw new IllegalArgumentException("Double operators in " + src + "!");
                 }
             } else if (left instanceof UnaryOperator) {
-                if (right instanceof Operator)
+                if (right instanceof Operator) {
                     throw new IllegalArgumentException("Operator after unary operator in " + src + "!");
+                }
                 list.set(i, new UnaryFunction((UnaryOperator) left, right));
                 list.remove(i - 1);
-            } else if (!(right instanceof Operator || right instanceof Double))
+            } else if (!(right instanceof Operator || right instanceof Double)) {
                 list.add(i, MULTIPLY); // Add implicit multiplication
+            }
         }
-        List<Object> sub = new ArrayList<>();
-        List<Object> children = new ArrayList<>();
+        List<Object> sub = new ArrayList<>(), children = new ArrayList<>();
         for (Object o : list) {
             if (o == op) {
                 Operator last = null;
-                for (Object o2 : sub)
-                    if (o2 instanceof Operator && (last == null
-                            || ((Operator) o2).level > last.level))
+                for (Object o2 : sub) {
+                    if (o2 instanceof Operator && (last == null || ((Operator) o2).level > last.level)) {
                         last = (Operator) o2;
+                    }
+                }
                 children.add(getElement(src, sub, last, ctx));
                 sub.clear();
-            } else sub.add(o);
+            } else {
+                sub.add(o);
+            }
         }
         if (!sub.isEmpty()) {
             Operator last = null;
-            for (Object o : sub)
-                if (o instanceof Operator && (last == null
-                        || ((Operator) o).level > last.level))
+            for (Object o : sub) {
+                if (o instanceof Operator && (last == null || ((Operator) o).level > last.level)) {
                     last = (Operator) o;
+                }
+            }
             children.add(getElement(src, sub, last, ctx));
         }
-        return new Formula(op, children, ctx);
+        return new Formula(op, ctx == null ? null : ctx.numberFormat(), children.toArray());
     }
 
     private final Operator operator;
-    private final Object[] values;
     private final NumberFormat format;
+    private final Object[] values;
 
-    private Formula(Operator operator, List<Object> values, ParsingContext ctx) {
+    public Formula(Operator operator, NumberFormat format, Object... values) {
         this.operator = operator;
-        this.values = values.toArray(new Object[values.size()]);
-        format = ctx == null ? null : ctx.numberFormat();
+        this.format = format;
+        this.values = values;
     }
 
     public double compute(Nagger nagger, Object who, PlaceholderContext ctx) {
-        if (values.length == 0) return 0;
+        int length = values.length;
+        if (length == 0) {
+            return 0;
+        }
         double out = getValue(nagger, who, values[0], ctx);
-        for (int i = 1; i < values.length; i++)
-            out = operator.computer.applyAsDouble(out, getValue(nagger, who, values[i], ctx));
+        for (int i = 1; i < length; ) {
+            out = operator.computer.applyAsDouble(out, getValue(nagger, who, values[i++], ctx));
+        }
         return out;
     }
 
     @Override
     public String invoke(Nagger nagger, Object who, PlaceholderContext ctx) {
         double d = compute(nagger, who, ctx);
-        if (format != null) return format.format(d);
-        return Double.toString(d);
+        return format == null ? Double.toString(d) : format.format(d);
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder("(").append(values[0]);
-        for (int i = 1; i < values.length; i++)
+        for (int i = 1; i < values.length; ++i) {
             sb.append(operator.id).append(values[i]);
+        }
         return sb.append(')').toString();
     }
 

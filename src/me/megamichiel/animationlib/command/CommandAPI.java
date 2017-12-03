@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
-public interface CommandAPI<P, S, C> {
+public interface CommandAPI<S, C> {
     
     /**
      * Registers all methods of this class as command which meet the following requirements:
@@ -46,7 +46,7 @@ public interface CommandAPI<P, S, C> {
      * 
      * @throws NullPointerException if plugin or adapter is null
      */
-    List<CommandSubscription<C>> registerCommands(P plugin, CommandAdapter adapter);
+    List<CommandSubscription<C>> registerCommands(String plugin, CommandAdapter adapter);
 
     /**
      * Removes known commands from the existing registry. Stuff like /plugins can be removed.
@@ -107,7 +107,7 @@ public interface CommandAPI<P, S, C> {
      * @param plugin the owning plugin
      * @param command the command to register
      */
-    CommandSubscription<C> registerCommand(P plugin, C command);
+    CommandSubscription<C> registerCommand(String plugin, C command);
 
     /**
      * Registers a command directly into the server's command map
@@ -115,7 +115,7 @@ public interface CommandAPI<P, S, C> {
      * @param plugin the owning plugin
      * @param command the command to register
      */
-    CommandSubscription<C> registerCommand(P plugin, CommandInfo command);
+    CommandSubscription<C> registerCommand(String plugin, CommandInfo command);
 
     /**
      * Retrieves a command by name

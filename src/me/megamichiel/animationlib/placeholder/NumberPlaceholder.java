@@ -10,7 +10,7 @@ public class NumberPlaceholder implements IPlaceholder<Integer> {
     public static final NumberPlaceholder ZERO = of(0);
 
     public static NumberPlaceholder of(int val) {
-        return new NumberPlaceholder(IPlaceholder.constant(val));
+        return new NumberPlaceholder(CtxPlaceholder.constant(val));
     }
     
     private final IPlaceholder<Integer> handle;
@@ -34,7 +34,7 @@ public class NumberPlaceholder implements IPlaceholder<Integer> {
         IPlaceholder<Integer> placeholder;
         try {
             int val = Integer.parseInt(string);
-            placeholder = IPlaceholder.constant(val);
+            placeholder = CtxPlaceholder.constant(val);
         } catch (NumberFormatException ex) {
             StringBundle sb = StringBundle.parse(Nagger.ILLEGAL_ARGUMENT, string);
             if (!sb.containsPlaceholders()) {

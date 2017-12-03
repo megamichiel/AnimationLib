@@ -24,8 +24,8 @@ public class XmlConfig extends MapConfig {
 
     private static final long serialVersionUID = 8119705465099280977L;
 
-    private final Supplier<DocumentBuilderFactory> factory = LazyValue.of(DocumentBuilderFactory::newInstance);
-    private final Supplier<Transformer> transformer = LazyValue.of(() -> {
+    private final transient Supplier<DocumentBuilderFactory> factory = LazyValue.of(DocumentBuilderFactory::newInstance);
+    private final transient Supplier<Transformer> transformer = LazyValue.of(() -> {
         try {
             Transformer tf = TransformerFactory.newInstance().newTransformer();
             tf.setOutputProperty(OutputKeys.INDENT, "yes");

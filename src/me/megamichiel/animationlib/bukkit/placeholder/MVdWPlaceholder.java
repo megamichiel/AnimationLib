@@ -65,6 +65,12 @@ public class MVdWPlaceholder implements IPlaceholder<String> {
     @Override
     public String invoke(Nagger nagger, Object who) {
         PlaceholderReplacer replacer = PlaceholderAPI.getCustomPlaceholders().get(plugin);
-        return replacer != null ? replacer.onPlaceholderReplace(new PlaceholderReplaceEvent((Player) who, name)) : "<unknown_placeholder>";
+        try {
+            return replacer != null ? replacer.onPlaceholderReplace(new PlaceholderReplaceEvent((Player) who, name)) : "<unknown_placeholder>";
+        } catch (Exception ex) {
+            nagger.nag("Failed to process placeholder %" + identifier + "%!");
+            nagger.nag(ex);
+            return "<internal_error>";
+        }
     }
 }

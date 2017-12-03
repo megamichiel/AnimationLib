@@ -11,9 +11,9 @@ public class YamlConfig extends MapConfig {
 
     private static final long serialVersionUID = -3738784362967660224L;
 
-    private final Representer     representer = new Representer();
-    private final DumperOptions   options     = new DumperOptions();
-    private final Yaml            yaml        = new Yaml(representer, options);
+    private final transient Representer     representer = new Representer();
+    private final transient DumperOptions   options     = new DumperOptions();
+    private final transient Yaml            yaml        = new Yaml(representer, options);
 
     {
         options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);

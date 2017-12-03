@@ -50,7 +50,7 @@ public class ReflectCommandExecutor implements CommandExecutor {
         }, "\u0000");
     }
 
-    private final BaseCommandAPI<?, ?, ?> api;
+    private final BaseCommandAPI<?, ?> api;
     private final String red;
     private final CommandAdapter adapter;
     private final CommandHandler handler;
@@ -59,7 +59,7 @@ public class ReflectCommandExecutor implements CommandExecutor {
     private final List<ArgumentParser> subcommands = new ArrayList<>();
     private Method tabCompleter;
 
-    public ReflectCommandExecutor(BaseCommandAPI<?, ?, ?> api, String red,
+    public ReflectCommandExecutor(BaseCommandAPI<?, ?> api, String red,
                                   CommandAdapter adapter, Method method,
                                   CommandHandler handler)
             throws IllegalArgumentException {
@@ -109,10 +109,10 @@ public class ReflectCommandExecutor implements CommandExecutor {
             if (!handler.usage().isEmpty()) {
                 api.sendMessage(sender, red + handler.usage().replace("<command>", label));
             } else {
-                StringBuilder sb = new StringBuilder(red)
-                        .append(parser.getUsage(sender, label));
-                for (ArgumentParser subcommand : subcommands)
+                StringBuilder sb = new StringBuilder(red).append(parser.getUsage(sender, label));
+                for (ArgumentParser subcommand : subcommands) {
                     sb.append(" OR ").append(subcommand.getUsage(sender, label));
+                }
                 api.sendMessage(sender, sb.toString());
             }
         }
@@ -137,19 +137,24 @@ public class ReflectCommandExecutor implements CommandExecutor {
             Object o = parser.method.invoke(adapter, parsed);
             if (o != null) {
                 if (o instanceof Boolean) {
-                    if (!(Boolean) o)
+                    if (!(Boolean) o) {
                         api.sendMessage(sender, red + parser.getUsage(sender, label));
-                } else if (o instanceof String) api.sendMessage(sender, (String) o);
-                else {
+                    }
+                } else if (o instanceof String) {
+                    api.sendMessage(sender, (String) o);
+                } else {
                     CommandResultHandler handler = api.getCommandResultHandler(o.getClass());
-                    if (handler != null) handler.onCommandResult(sender, o);
+                    if (handler != null) {
+                        handler.onCommandResult(sender, o);
+                    }
                 }
             }
         } catch (Exception ex) {
             if (ex instanceof InvocationTargetException) {
                 Throwable cause = ex.getCause();
-                if (cause instanceof CommandException)
+                if (cause instanceof CommandException) {
                     throw cause instanceof InvalidUsageException ? (InvalidUsageException) cause : new IllegalArgumentException(cause.getMessage());
+                }
             }
             api.sendMessage(sender, red + "An error occurred on performing this command");
             ex.printStackTrace();
@@ -165,8 +170,9 @@ public class ReflectCommandExecutor implements CommandExecutor {
             }
             return;
         }
-        if (params.length == 0)
+        if (params.length == 0) {
             throw new IllegalArgumentException("Must have at least 1 parameter!");
+        }
         Annotation[][] annotations = method.getParameterAnnotations();
         Alias alias;
         boolean hasInfo = params.length > 1
@@ -189,8 +195,8 @@ public class ReflectCommandExecutor implements CommandExecutor {
             this.method = method;
             method.setAccessible(true);
             this.sender = params[0];
-            offset = hasInfo ? 2 : 1;
             label = hasInfo && params[1] == String.class;
+            offset = label ? 2 : 1;
             arguments = new Argument[params.length - offset];
 
             CommandArguments aliases = method.getAnnotation(CommandArguments.class);
@@ -255,7 +261,7 @@ public class ReflectCommandExecutor implements CommandExecutor {
         }
 
         void parse(Object sender) throws IllegalArgumentException {
-            while (index != arguments.length) {
+            while (index < arguments.length) {
                 Argument arg = arguments[index];
                 if (set[index]) continue;
                 if (parseIndex == args.length) {
@@ -280,7 +286,7 @@ public class ReflectCommandExecutor implements CommandExecutor {
                 }
                 getValue(sender, arg);
             }
-            if (parseIndex != args.length) {
+            if (parseIndex < args.length) {
                 if (array == null) throw new InvalidUsageException();
                 throw new IllegalArgumentException(array.getMessage());
             }
