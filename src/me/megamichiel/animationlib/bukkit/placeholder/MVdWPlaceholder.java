@@ -6,6 +6,7 @@ import be.maximvdw.placeholderapi.PlaceholderReplacer;
 import me.megamichiel.animationlib.Nagger;
 import me.megamichiel.animationlib.placeholder.IPlaceholder;
 import me.megamichiel.animationlib.placeholder.PlaceholderContext;
+import me.megamichiel.animationlib.placeholder.StringBundle;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
@@ -40,16 +41,17 @@ public class MVdWPlaceholder implements IPlaceholder<String> {
     }
 
     private final String plugin, name, identifier;
+    private final boolean color;
 
     private MVdWPlaceholder(String identifier) {
-        int index = (this.identifier = identifier).indexOf('_');
-        if (index > 0) {
-            plugin = identifier.substring(0, index);
-            name = identifier.substring(index + 1);
-        } else {
-            plugin = "";
-            name = identifier;
+        if (color = identifier.startsWith("color:")) {
+            identifier = identifier.substring(6);
         }
+
+        int index = (this.identifier = identifier).indexOf('_');
+
+        plugin = index == -1 ? "" : identifier.substring(0, index);
+        name = identifier.substring(index + 1);
     }
 
     @Override
@@ -66,7 +68,12 @@ public class MVdWPlaceholder implements IPlaceholder<String> {
     public String invoke(Nagger nagger, Object who) {
         PlaceholderReplacer replacer = PlaceholderAPI.getCustomPlaceholders().get(plugin);
         try {
-            return replacer != null ? replacer.onPlaceholderReplace(new PlaceholderReplaceEvent((Player) who, name)) : "<unknown_placeholder>";
+            if (replacer == null) {
+                return "<unknown_placeholder>";
+            }
+            String str = replacer.onPlaceholderReplace(new PlaceholderReplaceEvent((Player) who, name));
+
+            return color ? StringBundle.colorAmpersands(str) : str;
         } catch (Exception ex) {
             nagger.nag("Failed to process placeholder %" + identifier + "%!");
             nagger.nag(ex);

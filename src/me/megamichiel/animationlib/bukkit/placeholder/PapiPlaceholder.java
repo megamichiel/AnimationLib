@@ -9,6 +9,7 @@ import me.megamichiel.animationlib.Nagger;
 import me.megamichiel.animationlib.bukkit.AnimLibPlugin;
 import me.megamichiel.animationlib.placeholder.IPlaceholder;
 import me.megamichiel.animationlib.placeholder.PlaceholderContext;
+import me.megamichiel.animationlib.placeholder.StringBundle;
 import me.megamichiel.animationlib.util.ReflectClass;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -64,17 +65,18 @@ public class PapiPlaceholder implements IPlaceholder<String> {
     }
     
     private final String plugin, name, identifier;
+    private final boolean color;
     private boolean notified = false, downloading = false;
     
     private PapiPlaceholder(String identifier) {
-        int index = (this.identifier = identifier).indexOf('_');
-        if (index > 0) {
-            plugin = identifier.substring(0, index);
-            name = identifier.substring(index + 1);
-        } else {
-            plugin = "";
-            name = identifier;
+        if (color = identifier.startsWith("color:")) {
+            identifier = identifier.substring(6);
         }
+
+        int index = (this.identifier = identifier).indexOf('_');
+
+        plugin = index == -1 ? "" : identifier.substring(0, index);
+        name = identifier.substring(index + 1);
     }
 
     @Override
@@ -109,7 +111,7 @@ public class PapiPlaceholder implements IPlaceholder<String> {
                 nagger.nag(ex);
                 return "<internal_error>";
             }
-            return str != null ? str : "<invalid_argument>";
+            return str != null ? (color ? StringBundle.colorAmpersands(str) : str) : "<invalid_argument>";
         } else {
             AnimLibPlugin lib = AnimLibPlugin.getInstance();
             if (!downloading && lib.autoDownloadPlaceholders()) {

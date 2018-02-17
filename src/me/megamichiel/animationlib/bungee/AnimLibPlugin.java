@@ -33,8 +33,8 @@ public class AnimLibPlugin extends Plugin implements AnimLib<Event> {
         BungeePlaceholder.onEnable(this);
         getProxy().getScheduler().runAsync(this, () -> {
             try {
-                String update = AnimLib.getVersion(22295);
-                if (!update.equals(getDescription().getVersion())) {
+                String update = AnimLib.getVersion("AnimationLib");
+                if (update != null && !update.equals(getDescription().getVersion())) {
                     getLogger().info("A new version is available: " + update);
                 }
             } catch (IOException ex) {
