@@ -1,12 +1,11 @@
 package me.megamichiel.animationlib.bukkit.placeholder;
 
 import be.maximvdw.placeholderapi.PlaceholderAPI;
-import be.maximvdw.placeholderapi.PlaceholderReplaceEvent;
-import be.maximvdw.placeholderapi.PlaceholderReplacer;
 import me.megamichiel.animationlib.Nagger;
 import me.megamichiel.animationlib.placeholder.IPlaceholder;
 import me.megamichiel.animationlib.placeholder.PlaceholderContext;
 import me.megamichiel.animationlib.placeholder.StringBundle;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
@@ -40,7 +39,7 @@ public class MVdWPlaceholder implements IPlaceholder<String> {
         return registry.computeIfAbsent(identifier, MVdWPlaceholder::new);
     }
 
-    private final String plugin, name, identifier;
+    private final String identifier, placeholder;
     private final boolean color;
 
     private MVdWPlaceholder(String identifier) {
@@ -48,10 +47,7 @@ public class MVdWPlaceholder implements IPlaceholder<String> {
             identifier = identifier.substring(6);
         }
 
-        int index = (this.identifier = identifier).indexOf('_');
-
-        plugin = index == -1 ? "" : identifier.substring(0, index);
-        name = identifier.substring(index + 1);
+        placeholder = '{' + (this.identifier = identifier) + '}';
     }
 
     @Override
@@ -66,7 +62,17 @@ public class MVdWPlaceholder implements IPlaceholder<String> {
 
     @Override
     public String invoke(Nagger nagger, Object who) {
-        PlaceholderReplacer replacer = PlaceholderAPI.getCustomPlaceholders().get(plugin);
+        try {
+            String str = PlaceholderAPI.replacePlaceholders((OfflinePlayer) who, placeholder);
+
+            return color ? StringBundle.colorAmpersands(str) : str;
+        } catch (Exception ex) {
+            nagger.nag("Failed to process placeholder %" + identifier + "%!");
+            nagger.nag(ex);
+            return "<internal_error>";
+        }
+
+        /*PlaceholderReplacer replacer = PlaceholderAPI.getCustomPlaceholders().get(plugin);
         try {
             if (replacer == null) {
                 return "<unknown_placeholder>";
@@ -78,6 +84,6 @@ public class MVdWPlaceholder implements IPlaceholder<String> {
             nagger.nag("Failed to process placeholder %" + identifier + "%!");
             nagger.nag(ex);
             return "<internal_error>";
-        }
+        }*/
     }
 }
