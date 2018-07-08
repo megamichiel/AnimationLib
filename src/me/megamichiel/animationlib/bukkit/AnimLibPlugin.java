@@ -48,7 +48,6 @@ public class AnimLibPlugin extends JavaPlugin implements AnimLib<Event> {
 
     private final ConfigManager<YamlConfig> config = ConfigManager.of(YamlConfig::new);
 
-    private boolean autoDownloadPlaceholders;
     private AnimLibPlaceholders placeholders;
 
     @Override
@@ -56,8 +55,8 @@ public class AnimLibPlugin extends JavaPlugin implements AnimLib<Event> {
         instance = this;
         post(() -> {
             try {
-                String update = AnimLib.getVersion(22295);
-                if (!update.equals(getDescription().getVersion())) {
+                String update = AnimLib.getVersion("AnimationLib");
+                if (update != null && !update.equals(getDescription().getVersion())) {
                     getLogger().info("A new version is available: " + update);
                     this.update = DARK_GRAY.toString() + '[' + GOLD + "AnimationLib" + DARK_GRAY
                             + ']' + GREEN + " A new version (" + update + ") is available";
@@ -81,17 +80,11 @@ public class AnimLibPlugin extends JavaPlugin implements AnimLib<Event> {
     private void loadConfig() {
         YamlConfig config = this.config.getConfig();
 
-        autoDownloadPlaceholders = config.getBoolean("auto-download-placeholders");
-
         DataBase.load(this, config.getSection("databases"));
 
         if (placeholders != null) {
             placeholders.load(config);
         }
-    }
-
-    public boolean autoDownloadPlaceholders() {
-        return autoDownloadPlaceholders;
     }
 
     public static AnimLibPlugin getInstance() {

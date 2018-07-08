@@ -1,22 +1,14 @@
 package me.megamichiel.animationlib.bukkit.placeholder;
 
 import me.clip.placeholderapi.PlaceholderAPI;
-import me.clip.placeholderapi.PlaceholderAPIPlugin;
 import me.clip.placeholderapi.PlaceholderHook;
-import me.clip.placeholderapi.expansion.cloud.CloudExpansion;
-import me.clip.placeholderapi.expansion.cloud.ExpansionCloudManager;
 import me.megamichiel.animationlib.Nagger;
-import me.megamichiel.animationlib.bukkit.AnimLibPlugin;
 import me.megamichiel.animationlib.placeholder.IPlaceholder;
 import me.megamichiel.animationlib.placeholder.PlaceholderContext;
 import me.megamichiel.animationlib.placeholder.StringBundle;
-import me.megamichiel.animationlib.util.ReflectClass;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.scheduler.BukkitRunnable;
 
-import java.io.File;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,21 +33,17 @@ public class PapiPlaceholder implements IPlaceholder<String> {
     }
     
     public static final boolean apiAvailable;
-    private static final ReflectClass.Field placeholders;
     
     static {
         boolean flag;
-        ReflectClass.Field field;
         try {
-            field = new ReflectClass("me.clip.placeholderapi.PlaceholderAPI").getField("placeholders").makeAccessible();
+            Class.forName("me.clip.placeholderapi.PlaceholderAPI");
             flag = true;
-        } catch (ReflectClass.ReflectException ex) {
+        } catch (ClassNotFoundException ex) {
             // No PlaceholderAPI ;c
             flag = false;
-            field = null;
         }
         apiAvailable = flag;
-        placeholders = field;
     }
 
     private static final Map<String, PapiPlaceholder> registry = new ConcurrentHashMap<>();
@@ -66,7 +54,7 @@ public class PapiPlaceholder implements IPlaceholder<String> {
     
     private final String plugin, name, identifier;
     private final boolean color;
-    private boolean notified = false, downloading = false;
+    private boolean notified = false;
     
     private PapiPlaceholder(String identifier) {
         if (color = identifier.startsWith("color:")) {
@@ -95,7 +83,7 @@ public class PapiPlaceholder implements IPlaceholder<String> {
             return toString();
         }
 
-        Map map = (Map) placeholders.getStatic();
+        Map<String, PlaceholderHook> map = PlaceholderAPI.getPlaceholders();
 
         if (map == null) {
             return "<unknown_placeholder>";
@@ -105,7 +93,7 @@ public class PapiPlaceholder implements IPlaceholder<String> {
         if (hook != null) {
             String str;
             try {
-                str = ((PlaceholderHook) hook).onPlaceholderRequest((Player) who, name);
+                str = ((PlaceholderHook) hook).onRequest((Player) who, name);
             } catch (Exception ex) {
                 nagger.nag("Failed to process placeholder %" + identifier + "%!");
                 nagger.nag(ex);
@@ -113,40 +101,11 @@ public class PapiPlaceholder implements IPlaceholder<String> {
             }
             return str != null ? (color ? StringBundle.colorAmpersands(str) : str) : "<invalid_argument>";
         } else {
-            AnimLibPlugin lib = AnimLibPlugin.getInstance();
-            if (!downloading && lib.autoDownloadPlaceholders()) {
-                PlaceholderAPIPlugin papi = PlaceholderAPIPlugin.getInstance();
-                if (papi.getExpansionManager().getExpansion(plugin) == null) {
-                    ExpansionCloudManager manager = papi.getExpansionCloud();
-                    CloudExpansion expansion = manager.getCloudExpansion(plugin);
-                    if (expansion != null) {
-                        downloading = true;
-                        lib.getLogger().info("Attempting to download expansion " + plugin + "...");
-                        manager.downloadExpansion(null, expansion);
-                        File dir = new File(papi.getDataFolder(), "expansions");
-                        File file = new File(dir, "Expansion-" + expansion.getName() + ".jar");
-                        new BukkitRunnable() {
-                            int count = 0;
-                            @Override
-                            public void run() {
-                                if (file.exists()) {
-                                    lib.getLogger().info("Successfully downloaded " + plugin + "!");
-                                    Bukkit.getScheduler().runTaskLater(lib, () -> papi.reloadConf(Bukkit.getConsoleSender()), 20L);
-                                    cancel();
-                                } else if (++count == 10) {
-                                    lib.getLogger().warning("Unable to download expansion " + plugin + "!");
-                                    cancel();
-                                }
-                            }
-                        }.runTaskTimer(lib, 40L, 40L);
-                    }
-                } else downloading = true;
-            }
-            if (!downloading && !notified) {
+            if (!notified) {
                 nagger.nag("Couldn't find placeholder by ID \"" + plugin + "\"!");
                 notified = true;
             }
         }
-        return downloading ? "<downloading>" : "<unknown_placeholder>";
+        return "<unknown_placeholder>";
     }
 }
