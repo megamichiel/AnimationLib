@@ -1,10 +1,7 @@
 package me.megamichiel.animationlib.bukkit.nbt;
 
 import org.apache.commons.lang.Validate;
-import org.bukkit.Bukkit;
-import org.bukkit.Color;
-import org.bukkit.DyeColor;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.block.banner.Pattern;
 import org.bukkit.block.banner.PatternType;
 import org.bukkit.enchantments.Enchantment;
@@ -12,11 +9,29 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static me.megamichiel.animationlib.bukkit.AnimLibPlugin.IS_LEGACY;
+
 @SuppressWarnings({"deprecation", "unused", "WeakerAccess"})
 public class ItemTag {
+
+    private static final Method ENCH_BY_ID, ENCH_GET_ID;
+
+    static {
+        Method byId, getId;
+        try {
+            byId = Enchantment.class.getDeclaredMethod("getById", int.class);
+            getId = Enchantment.class.getDeclaredMethod("getId");
+        } catch (Exception ex) {
+            byId = null;
+            getId = null;
+        }
+        ENCH_BY_ID = byId;
+        ENCH_GET_ID = getId;
+    }
 
     private final NBTTag tag;
 
@@ -112,27 +127,51 @@ public class ItemTag {
     }
 
     public Ench getEnchants() {
-        NBTList list = tag.getList("ench");
+        NBTList list = tag.getList(IS_LEGACY ? "ench" : "Enchantments");
         if (list == null) return null;
         Ench ench = new Ench();
         Map<Enchantment, Integer> handle = ench.handle;
         for (int i = 0; i < list.size(); i++) {
             NBTTag tag = list.getTag(i);
             if (tag == null) continue;
-            int id = tag.getShort("id") & 0xFFFF, lvl = tag.getShort("lvl") & 0xFFFF;
-            Enchantment enchant = Enchantment.getById(id);
-            if (enchant != null && lvl > 0) handle.put(enchant, lvl);
+
+            int lvl = tag.getShort("lvl") & 0xFFFF;
+            Enchantment enchant;
+            if (IS_LEGACY) {
+                int id = tag.getShort("id") & 0xFFFF;
+                try {
+                    enchant = (Enchantment) ENCH_BY_ID.invoke(null, id);
+                } catch (Exception ex) {
+                    enchant = null;
+                }
+            } else {
+                String id = tag.getString("id");
+                if (id == null) continue;
+                int index = id.indexOf(':');
+                enchant = Enchantment.getByKey(new NamespacedKey(index == -1 ? "minecraft" : id.substring(0, index), id.substring(index + 1)));
+            }
+            if (enchant != null && lvl > 0) {
+                handle.put(enchant, lvl);
+            }
         }
         return ench;
     }
 
     public void setEnchants(Ench ench) {
-        if (ench == null) tag.remove("ench");
+        if (ench == null) tag.remove(IS_LEGACY ? "ench" : "Enchantments");
         else {
-            NBTList list = tag.createList("ench");
+            NBTList list = tag.createList(IS_LEGACY ? "ench" : "Enchantments");
             ench.handle.forEach((enchant, lvl) -> {
                 NBTTag tag = new NBTTag();
-                tag.set("id", enchant.getId());
+                if (IS_LEGACY) {
+                    try {
+                        tag.set("id", ENCH_GET_ID.invoke(enchant));
+                    } catch (Exception e) {
+                        return;
+                    }
+                } else {
+                    tag.set("id", enchant.getKey().toString());
+                }
                 tag.set("lvl", lvl);
                 list.addRaw(tag.getHandle());
             });
@@ -165,7 +204,7 @@ public class ItemTag {
             NBTTag tag = list.getTag(i);
             if (tag == null || !tag.contains("Operation") || !tag.contains("Amount")) continue;
             int operation = tag.getByte("Operation") & 0xFF;
-            if (operation < 0 || operation >= operations.length) continue;
+            if (operation >= operations.length) continue;
             String attrName = tag.getString("AttributeName"),
                     name = tag.getString("Name"), slot = tag.getString("Slot");
             if (name == null || slot == null) continue;

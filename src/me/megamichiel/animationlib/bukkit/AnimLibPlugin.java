@@ -10,6 +10,7 @@ import me.megamichiel.animationlib.placeholder.StringBundle;
 import me.megamichiel.animationlib.util.db.DataBase;
 import me.megamichiel.animationlib.util.pipeline.Pipeline;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.event.Event;
@@ -23,6 +24,18 @@ import java.io.IOException;
 import static org.bukkit.ChatColor.*;
 
 public class AnimLibPlugin extends JavaPlugin implements AnimLib<Event> {
+
+    public static final boolean IS_LEGACY;
+
+    static {
+        boolean legacy = false;
+        try {
+            Material.class.getDeclaredMethod("getKey");
+        } catch (Exception ex) {
+            legacy = true;
+        }
+        IS_LEGACY = legacy;
+    }
 
     private static AnimLibPlugin instance;
 

@@ -62,7 +62,7 @@ public class NBTUtil {
             listConstructor = listClass.getConstructor();
             (list = listClass.getDeclaredField("list")).setAccessible(true);
             (type = listClass.getDeclaredField("type")).setAccessible(true);
-            getTypeId = listClass.getSuperclass().getDeclaredMethod("getTypeId");
+            getTypeId = Class.forName(tagClass.getName().replace("TagCompound", "Base")).getDeclaredMethod("getTypeId");
             /* Field is not final, but to stay future-proof */
             modifiers.set(list, list.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
 
@@ -75,7 +75,7 @@ public class NBTUtil {
             (applyToItem = Class.forName(itemClass.getPackage().getName() + ".CraftMetaItem")
                     .getDeclaredMethod("applyToItem", tagClass)).setAccessible(true);
         } catch (Exception ex) {
-            System.err.println("[AnimationLib] Couldn't find itemstack handle, no nbt support ;c");
+            System.err.println("[AnimationLib] Couldn't find itemstack handle, no nbt support ;c: " + ex.getMessage());
             itemClass = null;
             tagConstructor = listConstructor = itemConstructor = null;
             handle = tag = map = list = type = unhandledTags = null;
@@ -121,7 +121,10 @@ public class NBTUtil {
     public ItemStack setTag(ItemStack stack, Object tag) throws IllegalStateException {
         if (isSupported(stack = asNMS(stack))) {
             try {
-                this.tag.set(handle.get(stack), tag);
+                Object obj = handle.get(stack);
+                if (obj != null) {
+                    this.tag.set(obj, tag);
+                }
             } catch (IllegalAccessException ex) {
                 throw new IllegalStateException(ex);
             }
@@ -362,8 +365,7 @@ public class NBTUtil {
         return modifier(search);
     }
 
-    public <T> Modifier<T> modifier(Class<T> type) 
-            throws NoSuchElementException, IllegalArgumentException {
+    public <T> Modifier<T> modifier(Class<T> type) throws NoSuchElementException, IllegalArgumentException {
         Modifier<?> mod = modifiers.get(type);
         if (mod != null) return (Modifier<T>) mod;
         Class<?> data = type;
